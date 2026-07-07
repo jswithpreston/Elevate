@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 
 export default function VerifyCodeScreen() {
   const router = useRouter();
-  const { email } = useLocalSearchParams(); // Get email from previous screen
-  const [code, setCode] = useState(['', '', '', '']);
+  const { email } = useLocalSearchParams();
+  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [loading, setLoading] = useState(false);
   const inputs = useRef<Array<TextInput | null>>([]);
 
   const handleChange = (text: string, index: number) => {
@@ -14,14 +16,36 @@ export default function VerifyCodeScreen() {
     newCode[index] = text;
     setCode(newCode);
 
-    if (text && index < 3) {
+    if (text && index < 5) {
       inputs.current[index + 1]?.focus();
     }
   };
 
-  const handleVerify = () => {
-    // Proceed to set new password after successful verification
-    router.push('/set-new-password');
+  const handleVerify = async () => {
+    const token = code.join('');
+    if (token.length < 6) {
+      Alert.alert('Error', 'Please enter the 6-digit code');
+      return;
+    }
+    
+    if (!email || Array.isArray(email)) {
+      Alert.alert('Error', 'Invalid email address');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({ 
+      email, 
+      token, 
+      type: 'recovery' 
+    });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Verification Failed', error.message);
+    } else {
+      router.push('/set-new-password');
+    }
   };
 
   const displayEmail = email || 'your email';
@@ -37,7 +61,7 @@ export default function VerifyCodeScreen() {
             <Ionicons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.logoText}>Elevate</Text>
-          <View style={{ width: 24 }} /> {/* Spacer to center logo */}
+          <View style={{ width: 24 }} />
         </View>
 
         <View style={styles.card}>
@@ -49,7 +73,7 @@ export default function VerifyCodeScreen() {
 
           <Text style={styles.title}>Verify Email</Text>
           <Text style={styles.subtitle}>
-            We've sent a 4-digit code to {displayEmail}. Enter it below.
+            We've sent a 6-digit code to {displayEmail}. Enter it below.
           </Text>
 
           <View style={styles.codeContainer}>
@@ -66,9 +90,19 @@ export default function VerifyCodeScreen() {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleVerify}>
-            <Text style={styles.primaryButtonText}>Verify</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            onPress={handleVerify}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <>
+                <Text style={styles.primaryButtonText}>Verify</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+              </>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.resendButton}>
@@ -122,7 +156,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E0F2FE', // Light blue background
+    backgroundColor: '#E0F2FE',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -146,10 +180,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   codeInput: {
-    width: 56,
-    height: 64,
+    width: 44, // Slightly smaller width to fit 6 digits
+    height: 56,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6', // Light gray
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     fontSize: 24,
@@ -158,11 +192,11 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   codeFilled: {
-    borderColor: '#3B82F6', // Light blue border when filled
+    borderColor: '#3B82F6',
     backgroundColor: '#FFFFFF',
   },
   primaryButton: {
-    backgroundColor: '#3B82F6', // Light blue
+    backgroundColor: '#3B82F6',
     borderRadius: 100,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -180,7 +214,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   resendButtonText: {
-    color: '#3B82F6', // Light blue text
+    color: '#3B82F6',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 1,

@@ -1,98 +1,101 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import { useAppTheme } from '@/context/ThemeContext';
+import { useStore } from '@/store/useStore';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { activeTheme } = useAppTheme();
+  const isDark = activeTheme === 'dark';
+  
+  const { tasks, habits, goals } = useStore();
+  
+  const today = new Date().toISOString().split('T')[0];
+  const pendingTasks = tasks.filter(t => !t.completed).length;
+  const habitsCompletedToday = habits.filter(h => h.last_completed_date === today).length;
+  const totalHabits = habits.length;
+  const activeGoals = goals.filter(g => g.progress < 100).length;
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+      <View style={styles.header}>
+        <Text style={[styles.greeting, isDark && styles.textDark]}>Hello, Preston 👋</Text>
+        <Text style={[styles.subtitle, isDark && styles.textDarkSecondary]}>Here's your summary for today.</Text>
+      </View>
+      
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Overview Cards */}
+        <View style={styles.cardsGrid}>
+          <TouchableOpacity 
+            style={[styles.card, styles.tasksCard, isDark && styles.cardDark]}
+            onPress={() => router.push('/(tabs)/tasks')}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+              <Ionicons name="checkbox" size={24} color="#3B82F6" />
+            </View>
+            <Text style={[styles.cardValue, isDark && styles.textDark]}>{pendingTasks}</Text>
+            <Text style={[styles.cardLabel, isDark && styles.textDarkSecondary]}>Pending Tasks</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.card, styles.habitsCard, isDark && styles.cardDark]}
+            onPress={() => router.push('/(tabs)/habits')}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <Ionicons name="leaf" size={24} color="#10B981" />
+            </View>
+            <Text style={[styles.cardValue, isDark && styles.textDark]}>{habitsCompletedToday} / {totalHabits}</Text>
+            <Text style={[styles.cardLabel, isDark && styles.textDarkSecondary]}>Habits Done</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.card, styles.goalsCard, isDark && styles.cardDark]}
+            onPress={() => router.push('/(tabs)/goals')}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+              <Ionicons name="trophy" size={24} color="#8B5CF6" />
+            </View>
+            <Text style={[styles.cardValue, isDark && styles.textDark]}>{activeGoals}</Text>
+            <Text style={[styles.cardLabel, isDark && styles.textDarkSecondary]}>Active Goals</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Recent Activity or Motivations */}
+        <View style={[styles.motivationSection, isDark && styles.motivationSectionDark]}>
+          <Ionicons name="rocket-outline" size={32} color="#F59E0B" />
+          <Text style={[styles.motivationTitle, isDark && styles.textDark]}>Keep it up!</Text>
+          <Text style={[styles.motivationText, isDark && styles.textDarkSecondary]}>
+            "Success is the sum of small efforts, repeated day in and day out."
+          </Text>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  containerDark: { backgroundColor: '#111827' },
+  header: { padding: 24, paddingBottom: 16 },
+  greeting: { fontSize: 32, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  subtitle: { fontSize: 16, color: '#6B7280' },
+  textDark: { color: '#F9FAFB' },
+  textDarkSecondary: { color: '#9CA3AF' },
+  scrollContent: { padding: 24, paddingBottom: 100 },
+  cardsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 32 },
+  card: { flex: 1, minWidth: '45%', backgroundColor: '#FFF', padding: 20, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 3 },
+  cardDark: { backgroundColor: '#1F2937' },
+  tasksCard: { borderTopWidth: 4, borderTopColor: '#3B82F6' },
+  habitsCard: { borderTopWidth: 4, borderTopColor: '#10B981' },
+  goalsCard: { borderTopWidth: 4, borderTopColor: '#8B5CF6' },
+  iconContainer: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  cardValue: { fontSize: 28, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  cardLabel: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  motivationSection: { backgroundColor: '#FFF', padding: 24, borderRadius: 16, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#D1D5DB' },
+  motivationSectionDark: { backgroundColor: '#1F2937', borderColor: '#374151' },
+  motivationTitle: { fontSize: 20, fontWeight: '600', color: '#111827', marginTop: 12, marginBottom: 8 },
+  motivationText: { fontSize: 15, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
 });

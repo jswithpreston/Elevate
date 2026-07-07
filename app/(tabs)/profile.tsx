@@ -1,14 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useAppTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import { useStore } from '@/store/useStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { activeTheme, theme, setTheme } = useAppTheme();
   const isDark = activeTheme === 'dark';
-  const userName = 'Julian Vance';
+  
+  const [userName, setUserName] = useState('User');
+  const { tasks, habits } = useStore();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user && user.user_metadata?.full_name) {
+        setUserName(user.user_metadata.full_name);
+      } else if (user?.email) {
+        setUserName(user.email.split('@')[0]);
+      }
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const toggleTheme = () => {
     // Cycle between light, dark, and system
@@ -18,6 +36,9 @@ export default function ProfileScreen() {
   };
 
   const themeLabel = theme === 'system' ? 'System Default' : theme === 'dark' ? 'Dark Mode' : 'Light Mode';
+  
+  const completedTasksCount = tasks.filter(t => t.completed).length;
+  const completedHabitsCount = habits.filter(h => h.streak > 0).length;
 
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
@@ -33,13 +54,12 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statsGrid}>
-          {/* Clean placeholders instead of hardcoded data */}
           <View style={[styles.statCard, isDark && styles.cardDark]}>
-            <Text style={[styles.statValue, isDark && styles.textDark]}>--</Text>
+            <Text style={[styles.statValue, isDark && styles.textDark]}>{completedTasksCount}</Text>
             <Text style={[styles.statLabel, isDark && styles.textDarkSecondary]}>TASKS DONE</Text>
           </View>
           <View style={[styles.statCard, isDark && styles.cardDark]}>
-            <Text style={[styles.statValue, isDark && styles.textDark]}>--</Text>
+            <Text style={[styles.statValue, isDark && styles.textDark]}>{completedHabitsCount}</Text>
             <Text style={[styles.statLabel, isDark && styles.textDarkSecondary]}>HABITS KEPT</Text>
           </View>
         </View>
@@ -57,7 +77,7 @@ export default function ProfileScreen() {
             <Ionicons name="settings-outline" size={20} color={isDark ? "#F9FAFB" : "#111827"} />
             <Text style={[styles.menuText, isDark && styles.textDark]}>Settings</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#EF4444" />
             <Text style={[styles.menuText, { color: '#EF4444' }]}>Logout</Text>
           </TouchableOpacity>

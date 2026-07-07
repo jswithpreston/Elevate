@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSendCode = () => {
-    // In a real app, we'd trigger the API here
-    // Pass the email to verify screen
-    router.push({ pathname: '/verify-code', params: { email } });
+  const handleSendCode = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      router.push({ pathname: '/verify-code', params: { email } });
+    }
   };
 
   return (
@@ -43,8 +56,16 @@ export default function ForgotPasswordScreen() {
             />
           </View>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSendCode}>
-            <Text style={styles.primaryButtonText}>Send Code</Text>
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            onPress={handleSendCode}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Send Code</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -55,7 +76,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Very light gray/blue
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
@@ -111,7 +132,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#D1D5DB',
   },
   primaryButton: {
-    backgroundColor: '#3B82F6', // Light blue
+    backgroundColor: '#3B82F6',
     borderRadius: 100,
     paddingVertical: 16,
     alignItems: 'center',

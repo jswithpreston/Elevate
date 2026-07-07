@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -9,6 +10,38 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignUp = async () => {
+    if (!email || !password || !name) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        }
+      }
+    });
+    
+    setLoading(false);
+    
+    if (error) {
+      Alert.alert('Sign Up Failed', error.message);
+    } else {
+      if (data.session) {
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Success', 'Please check your email for the verification link.');
+        router.push('/login');
+      }
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -76,10 +109,20 @@ export default function SignUpScreen() {
               <View style={styles.inputBorder} />
             </View>
 
-            {/* Sign Up Button (Light Blue) */}
-            <TouchableOpacity style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>SIGN UP</Text>
-              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+            {/* Sign Up Button */}
+            <TouchableOpacity 
+              style={styles.primaryButton} 
+              onPress={handleSignUp}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.primaryButtonText}>SIGN UP</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -137,7 +180,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E0F2FE', // Light blue background for icon
+    backgroundColor: '#E0F2FE',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -185,7 +228,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   primaryButton: {
-    backgroundColor: '#3B82F6', // Light blue
+    backgroundColor: '#3B82F6',
     borderRadius: 100,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -246,6 +289,6 @@ const styles = StyleSheet.create({
   bottomLinkAction: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#3B82F6', // Light blue
+    color: '#3B82F6',
   },
 });

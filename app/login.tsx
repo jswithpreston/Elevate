@@ -1,11 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    setLoading(false);
+    
+    if (error) {
+      Alert.alert('Login Failed', error.message);
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -55,9 +78,17 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Login Button (Light Blue as requested) */}
-          <TouchableOpacity style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Login</Text>
+          {/* Login Button */}
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Login</Text>
+            )}
           </TouchableOpacity>
 
           {/* Bottom Link */}
@@ -76,7 +107,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F0F4F8', // Light background
+    backgroundColor: '#F0F4F8',
   },
   container: {
     flex: 1,
@@ -136,7 +167,7 @@ const styles = StyleSheet.create({
   forgotPassword: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#3B82F6', // Light blue
+    color: '#3B82F6',
   },
   input: {
     fontSize: 16,
@@ -146,7 +177,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#D1D5DB',
   },
   primaryButton: {
-    backgroundColor: '#3B82F6', // Light blue as requested
+    backgroundColor: '#3B82F6',
     borderRadius: 100,
     paddingVertical: 16,
     alignItems: 'center',
@@ -170,6 +201,6 @@ const styles = StyleSheet.create({
   bottomLinkAction: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#3B82F6', // Light blue
+    color: '#3B82F6',
   },
 });

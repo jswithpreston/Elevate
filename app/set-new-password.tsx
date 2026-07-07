@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 
 export default function SetNewPasswordScreen() {
   const router = useRouter();
@@ -9,6 +10,7 @@ export default function SetNewPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Simple validation checks
   const hasEightChars = password.length >= 8;
@@ -26,10 +28,31 @@ export default function SetNewPasswordScreen() {
     </View>
   );
 
-  const handleReset = () => {
-    // Navigate back to login after password reset
-    router.dismissAll();
-    router.replace('/login');
+  const handleReset = async () => {
+    if (!hasEightChars || !hasNumber || !hasSpecialChar) {
+      Alert.alert('Error', 'Please meet all password requirements');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      Alert.alert('Success', 'Password has been updated successfully', [
+        { text: 'OK', onPress: () => {
+          router.dismissAll();
+          router.replace('/login');
+        }}
+      ]);
+    }
   };
 
   return (
@@ -45,8 +68,6 @@ export default function SetNewPasswordScreen() {
 
           <Text style={styles.title}>Set New Password</Text>
           <Text style={styles.subtitle}>Secure your account with a new password.</Text>
-
-          {/* Current password removed as per user request */}
 
           {/* New Password */}
           <View style={styles.inputContainer}>
@@ -89,12 +110,20 @@ export default function SetNewPasswordScreen() {
             <CheckItem label="One special character" checked={hasSpecialChar} />
           </View>
 
-          {/* Reset Password Button (Text changed based on action) */}
-          <TouchableOpacity style={styles.primaryButton} onPress={handleReset}>
-            <Text style={styles.primaryButtonText}>Reset Password</Text>
+          {/* Reset Password Button */}
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            onPress={handleReset}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Reset Password</Text>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
             <Text style={styles.cancelButtonText}>CANCEL</Text>
           </TouchableOpacity>
         </View>
@@ -179,7 +208,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   primaryButton: {
-    backgroundColor: '#3B82F6', // Light blue
+    backgroundColor: '#3B82F6',
     borderRadius: 100,
     paddingVertical: 16,
     alignItems: 'center',
