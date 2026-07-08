@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image } from 'react-native';
 import { useAppTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -11,7 +11,7 @@ export default function ProfileScreen() {
   const { activeTheme, theme, setTheme } = useAppTheme();
   const isDark = activeTheme === 'dark';
   
-  const [userName, setUserName] = useState('User');
+  const [userName, setUserName] = useState('Julian Vance');
   const { tasks, habits } = useStore();
 
   useEffect(() => {
@@ -28,82 +28,141 @@ export default function ProfileScreen() {
     await supabase.auth.signOut();
   };
 
-  const toggleTheme = () => {
-    // Cycle between light, dark, and system
-    if (theme === 'light') setTheme('dark');
-    else if (theme === 'dark') setTheme('system');
-    else setTheme('light');
-  };
-
-  const themeLabel = theme === 'system' ? 'System Default' : theme === 'dark' ? 'Dark Mode' : 'Light Mode';
-  
-  const completedTasksCount = tasks.filter(t => t.completed).length;
-  const completedHabitsCount = habits.filter(h => h.streak > 0).length;
-
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+      
+      <View style={styles.header}>
+        <Ionicons name="apps-outline" size={24} color="#0041c8" />
+        <Text style={[styles.headerTitle, isDark && styles.textDark]}>Elevate</Text>
+        <Ionicons name="notifications-outline" size={24} color="#0041c8" />
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={40} color={isDark ? "#9CA3AF" : "#CBD5E1"} />
+        
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            {/* Mock avatar */}
+            <View style={styles.avatarPlaceholder}>
+               <Ionicons name="person" size={60} color="#c3c5d9" />
+            </View>
           </View>
           <Text style={[styles.name, isDark && styles.textDark]}>{userName}</Text>
           <View style={styles.badge}>
+            <Ionicons name="star-outline" size={12} color="#0041c8" style={{marginRight: 6}} />
             <Text style={styles.badgeText}>LEVEL 12 - GROWTH ARCHITECT</Text>
           </View>
         </View>
 
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, isDark && styles.cardDark]}>
-            <Text style={[styles.statValue, isDark && styles.textDark]}>{completedTasksCount}</Text>
-            <Text style={[styles.statLabel, isDark && styles.textDarkSecondary]}>TASKS DONE</Text>
+          <View style={styles.statCard}>
+            <Ionicons name="checkmark-circle-outline" size={24} color="#434656" />
+            <Text style={styles.statValue}>842</Text>
+            <Text style={styles.statLabel}>TASKS DONE</Text>
           </View>
-          <View style={[styles.statCard, isDark && styles.cardDark]}>
-            <Text style={[styles.statValue, isDark && styles.textDark]}>{completedHabitsCount}</Text>
-            <Text style={[styles.statLabel, isDark && styles.textDarkSecondary]}>HABITS KEPT</Text>
+          <View style={styles.statCard}>
+            <Ionicons name="refresh-outline" size={24} color="#434656" />
+            <Text style={styles.statValue}>45</Text>
+            <Text style={styles.statLabel}>HABITS KEPT</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Ionicons name="flag-outline" size={24} color="#434656" />
+            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statLabel}>GOALS MET</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: '#e9f2fb', borderColor: '#dbe4ed', borderWidth: 1 }]}>
+            <Ionicons name="flash-outline" size={24} color="#0041c8" />
+            <Text style={[styles.statValue, { color: '#0041c8' }]}>14.2k</Text>
+            <Text style={[styles.statLabel, { color: '#0055ff' }]}>TOTAL POINTS</Text>
           </View>
         </View>
 
-        <View style={[styles.menuContainer, isDark && styles.cardDark]}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/progress')}>
-            <Ionicons name="bar-chart-outline" size={20} color={isDark ? "#F9FAFB" : "#111827"} />
-            <Text style={[styles.menuText, isDark && styles.textDark]}>View Progress & Stats</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={toggleTheme}>
-            <Ionicons name={isDark ? "moon-outline" : "sunny-outline"} size={20} color={isDark ? "#F9FAFB" : "#111827"} />
-            <Text style={[styles.menuText, isDark && styles.textDark]}>Appearance ({themeLabel})</Text>
-          </TouchableOpacity>
+        <View style={styles.menuContainer}>
+          
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="settings-outline" size={20} color={isDark ? "#F9FAFB" : "#111827"} />
-            <Text style={[styles.menuText, isDark && styles.textDark]}>Settings</Text>
+            <View style={styles.menuLeft}>
+              <Ionicons name="settings-outline" size={20} color="#141d23" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Settings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-            <Text style={[styles.menuText, { color: '#EF4444' }]}>Logout</Text>
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Ionicons name="notifications-outline" size={20} color="#141d23" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Notifications</Text>
+            </View>
+            <View style={styles.menuRight}>
+              <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>3</Text></View>
+              <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
+            </View>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Ionicons name="color-palette-outline" size={20} color="#141d23" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Appearance</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Ionicons name="person-outline" size={20} color="#141d23" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Account</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Ionicons name="help-circle-outline" size={20} color="#141d23" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Help</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={handleLogout}>
+            <View style={styles.menuLeft}>
+              <Ionicons name="log-out-outline" size={20} color="#ba1a1a" style={styles.menuIcon} />
+              <Text style={[styles.menuText, { color: '#ba1a1a' }]}>Logout</Text>
+            </View>
+          </TouchableOpacity>
+
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  containerDark: { backgroundColor: '#111827' },
-  scrollContent: { padding: 24, paddingBottom: 100 },
-  header: { alignItems: 'center', marginBottom: 32 },
-  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 4, borderColor: '#FFFFFF' },
-  name: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  badge: { backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100 },
-  badgeText: { color: '#3B82F6', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
-  textDark: { color: '#F9FAFB' },
-  textDarkSecondary: { color: '#9CA3AF' },
-  statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 },
-  statCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, alignItems: 'center', marginHorizontal: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 1 },
-  cardDark: { backgroundColor: '#1F2937' },
-  statValue: { fontSize: 28, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  statLabel: { fontSize: 10, color: '#6B7280', fontWeight: '600', letterSpacing: 1 },
-  menuContainer: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 8, shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 1 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  menuText: { fontSize: 16, color: '#111827', marginLeft: 16 },
+  container: { flex: 1, backgroundColor: '#f6faff' },
+  containerDark: { backgroundColor: '#141d23' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
+  headerTitle: { fontFamily: 'Manrope', fontSize: 20, fontWeight: '700', color: '#141d23' },
+  textDark: { color: '#ffffff' },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
+  profileSection: { alignItems: 'center', marginBottom: 32 },
+  avatarContainer: { width: 120, height: 120, borderRadius: 60, padding: 4, backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2, marginBottom: 16, alignItems: 'center', justifyContent: 'center' },
+  avatarPlaceholder: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#e1e3e4', alignItems: 'center', justifyContent: 'center' },
+  name: { fontFamily: 'Manrope', fontSize: 24, fontWeight: '600', color: '#141d23', marginBottom: 12 },
+  badge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e9f2fb', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  badgeText: { fontFamily: 'JetBrains Mono', fontSize: 10, fontWeight: '600', color: '#0041c8', letterSpacing: 1.2 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 32 },
+  statCard: { width: '48%', backgroundColor: '#ffffff', borderRadius: 24, padding: 24, alignItems: 'center', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.02, shadowRadius: 40, elevation: 2 },
+  statValue: { fontFamily: 'Manrope', fontSize: 48, fontWeight: '700', color: '#141d23', marginVertical: 8, letterSpacing: -0.96 },
+  statLabel: { fontFamily: 'JetBrains Mono', fontSize: 10, fontWeight: '500', color: '#141d23', letterSpacing: 1.2 },
+  menuContainer: { backgroundColor: '#ffffff', borderRadius: 24, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.02, shadowRadius: 40, elevation: 2 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, paddingHorizontal: 8 },
+  menuLeft: { flexDirection: 'row', alignItems: 'center' },
+  menuIcon: { marginRight: 16 },
+  menuText: { fontFamily: 'Manrope', fontSize: 16, color: '#141d23', fontWeight: '400' },
+  menuRight: { flexDirection: 'row', alignItems: 'center' },
+  notificationBadge: { backgroundColor: '#0041c8', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  notificationBadgeText: { fontFamily: 'Manrope', fontSize: 12, fontWeight: '700', color: '#ffffff' },
+  menuDivider: { height: 1, backgroundColor: '#f6faff', marginVertical: 8 },
 });
