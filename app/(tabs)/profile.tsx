@@ -11,16 +11,18 @@ export default function ProfileScreen() {
   const { activeTheme, theme, setTheme } = useAppTheme();
   const isDark = activeTheme === 'dark';
   
-  const [userName, setUserName] = useState('Julian Vance');
-  const { tasks, habits } = useStore();
+  const [userName, setUserName] = useState('');
+  const { tasks, habits, goals } = useStore();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && user.user_metadata?.full_name) {
-        setUserName(user.user_metadata.full_name);
-      } else if (user?.email) {
-        setUserName(user.email.split('@')[0]);
-      }
+      if (!user) return;
+      const fullName: string =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split('@')[0] ||
+        '';
+      setUserName(fullName.trim());
     });
   }, []);
 
@@ -56,23 +58,23 @@ export default function ProfileScreen() {
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Ionicons name="checkmark-circle-outline" size={24} color="#434656" />
-            <Text style={styles.statValue}>842</Text>
+            <Text style={styles.statValue}>{tasks.filter(t => t.completed).length}</Text>
             <Text style={styles.statLabel}>TASKS DONE</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="refresh-outline" size={24} color="#434656" />
-            <Text style={styles.statValue}>45</Text>
-            <Text style={styles.statLabel}>HABITS KEPT</Text>
+            <Text style={styles.statValue}>{habits.reduce((s, h) => s + h.streak, 0)}</Text>
+            <Text style={styles.statLabel}>TOTAL STREAK</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="flag-outline" size={24} color="#434656" />
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>{goals.filter(g => g.progress >= 100).length}</Text>
             <Text style={styles.statLabel}>GOALS MET</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#e9f2fb', borderColor: '#dbe4ed', borderWidth: 1 }]}>
             <Ionicons name="flash-outline" size={24} color="#0041c8" />
-            <Text style={[styles.statValue, { color: '#0041c8' }]}>14.2k</Text>
-            <Text style={[styles.statLabel, { color: '#0055ff' }]}>TOTAL POINTS</Text>
+            <Text style={[styles.statValue, { color: '#0041c8' }]}>{tasks.length + habits.length + goals.length}</Text>
+            <Text style={[styles.statLabel, { color: '#0055ff' }]}>TOTAL ITEMS</Text>
           </View>
         </View>
 
@@ -91,10 +93,7 @@ export default function ProfileScreen() {
               <Ionicons name="notifications-outline" size={20} color="#141d23" style={styles.menuIcon} />
               <Text style={styles.menuText}>Notifications</Text>
             </View>
-            <View style={styles.menuRight}>
-              <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>3</Text></View>
-              <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
-            </View>
+            <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>

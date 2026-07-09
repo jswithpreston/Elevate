@@ -1,138 +1,284 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useAppTheme } from '@/context/ThemeContext';
 import { useStore } from '@/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
 export default function HabitsScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === 'dark';
-  
-  const { habits } = useStore();
+
+  const { habits, addHabit, completeHabit, deleteHabit } = useStore();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newHabitTitle, setNewHabitTitle] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayDayIndex = new Date().getDay(); // 0 = Sunday
+
+  const completedToday = habits.filter(
+    (h) => h.last_completed_date === today
+  ).length;
+  const bestStreak = habits.reduce((max, h) => Math.max(max, h.streak), 0);
+
+  const handleAddHabit = async () => {
+    if (!newHabitTitle.trim() || isAdding) return;
+    setIsAdding(true);
+    await addHabit(newHabitTitle.trim());
+    setNewHabitTitle('');
+    setModalVisible(false);
+    setIsAdding(false);
+  };
 
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-      
+      {/* Header */}
       <View style={styles.header}>
         <Ionicons name="apps-outline" size={24} color="#0041c8" />
         <Text style={[styles.headerTitle, isDark && styles.textDark]}>Elevate</Text>
         <Ionicons name="notifications-outline" size={24} color="#0041c8" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={[styles.pageTitle, isDark && styles.textDark]}>Habits</Text>
-        <Text style={[styles.pageSubtitle, isDark && styles.textDarkSecondary]}>Stay consistent, see results.</Text>
+        <Text style={[styles.pageSubtitle, isDark && styles.textDarkSecondary]}>
+          Stay consistent, see results.
+        </Text>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>TOTAL COMPLETIONS</Text>
-            <Text style={styles.statValue}>342</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>BEST STREAK</Text>
-            <Text style={styles.statValue}>28</Text>
-          </View>
-        </View>
-
-        <View style={styles.weekCard}>
-          <View style={styles.weekHeaderRow}>
-            <Text style={styles.weekTitle}>This Week</Text>
-            <View style={styles.weekDateBox}>
-              <Text style={styles.weekDateText}>OCT 16 - 22</Text>
-              <Ionicons name="calendar-outline" size={16} color="#0041c8" style={{marginLeft: 8}} />
+        {/* Stats row */}
+        {habits.length > 0 && (
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, isDark && styles.statCardDark]}>
+              <Text style={[styles.statValue, isDark && styles.textDark]}>
+                {completedToday}
+              </Text>
+              <Text style={styles.statLabel}>TODAY{'\n'}DONE</Text>
+            </View>
+            <View style={[styles.statCard, isDark && styles.statCardDark]}>
+              <Text style={[styles.statValue, isDark && styles.textDark]}>
+                {habits.length}
+              </Text>
+              <Text style={styles.statLabel}>TOTAL{'\n'}HABITS</Text>
+            </View>
+            <View style={[styles.statCard, styles.statCardHighlight]}>
+              <Text style={[styles.statValue, { color: '#0041c8' }]}>
+                {bestStreak}
+              </Text>
+              <Text style={[styles.statLabel, { color: '#0041c8' }]}>
+                BEST{'\n'}STREAK
+              </Text>
             </View>
           </View>
-          <View style={styles.daysRow}>
-            {/* Just mocking the days to match visual for now */}
-            <View style={styles.dayCol}>
-              <Text style={styles.dayName}>S</Text>
-              <View style={styles.dayCirclePast}><View style={styles.dayDot} /></View>
-            </View>
-            <View style={styles.dayCol}>
-              <Text style={styles.dayName}>M</Text>
-              <View style={styles.dayCirclePast}><View style={styles.dayDot} /></View>
-            </View>
-            <View style={styles.dayCol}>
-              <Text style={styles.dayName}>T</Text>
-              <View style={styles.dayCircleMissed}><View style={styles.dayDotMissed} /></View>
-            </View>
-            <View style={styles.dayCol}>
-              <Text style={[styles.dayName, {color: '#0041c8', fontWeight: '700'}]}>W</Text>
-              <View style={styles.dayCircleActive}><Text style={styles.dayActiveText}>19</Text></View>
-            </View>
-            <View style={styles.dayCol}>
-              <Text style={styles.dayName}>T</Text>
-              <View style={styles.dayCircleFuture}><Text style={styles.dayFutureText}>20</Text></View>
-            </View>
-            <View style={styles.dayCol}>
-              <Text style={styles.dayName}>F</Text>
-              <View style={styles.dayCircleFuture}><Text style={styles.dayFutureText}>21</Text></View>
-            </View>
-          </View>
-        </View>
+        )}
 
-        <View style={styles.habitCard}>
-          <View style={[styles.habitIconBox, { backgroundColor: '#e9f2fb' }]}>
-            <Ionicons name="water-outline" size={24} color="#0041c8" />
+        {/* This Week row */}
+        {habits.length > 0 && (
+          <View style={[styles.weekCard, isDark && styles.weekCardDark]}>
+            <Text style={[styles.weekTitle, isDark && styles.textDark]}>
+              THIS WEEK
+            </Text>
+            <View style={styles.weekDays}>
+              {DAYS.map((d, i) => {
+                const isToday = i === todayDayIndex;
+                const isPast = i < todayDayIndex;
+                return (
+                  <View key={i} style={styles.dayItem}>
+                    <Text
+                      style={[styles.dayLabel, isDark && styles.textDarkSecondary]}
+                    >
+                      {d}
+                    </Text>
+                    <View
+                      style={[
+                        styles.dayDot,
+                        isToday && styles.dayDotToday,
+                        isPast && styles.dayDotPast,
+                      ]}
+                    >
+                      {isToday && completedToday > 0 && (
+                        <Ionicons name="checkmark" size={10} color="#fff" />
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </View>
-          <View style={styles.habitCardContent}>
-            <Text style={styles.habitCardTitle}>Hydration</Text>
-            <Text style={styles.habitCardStreak}>12 day streak</Text>
-          </View>
-          <View style={styles.checkCircleEmpty}>
-            <Ionicons name="checkmark" size={20} color="#c3c5d9" />
-          </View>
-        </View>
+        )}
 
-        <View style={styles.habitCard}>
-          <View style={[styles.habitIconBox, { backgroundColor: '#e9f2fb' }]}>
-            <Ionicons name="book-outline" size={24} color="#0041c8" />
-          </View>
-          <View style={styles.habitCardContent}>
-            <Text style={styles.habitCardTitle}>Read 20 Pages</Text>
-            <Text style={[styles.habitCardStreak, { color: '#0041c8' }]}>5 day streak</Text>
-          </View>
-          <View style={styles.checkCircleActive}>
-            <Ionicons name="checkmark" size={20} color="#ffffff" />
-          </View>
-        </View>
+        {/* Habits list */}
+        {habits.length > 0 ? (
+          habits.map((habit) => {
+            const isCompletedToday = habit.last_completed_date === today;
+            return (
+              <View
+                key={habit.id}
+                style={[styles.habitCard, isDark && styles.habitCardDark]}
+              >
+                <View
+                  style={[
+                    styles.habitIconBox,
+                    { backgroundColor: isCompletedToday ? '#e9f2fb' : '#f0f3f8' },
+                  ]}
+                >
+                  <Ionicons
+                    name="repeat-outline"
+                    size={24}
+                    color={isCompletedToday ? '#0041c8' : '#737688'}
+                  />
+                </View>
 
-        <View style={styles.habitCard}>
-          <View style={[styles.habitIconBox, { backgroundColor: '#e9f2fb' }]}>
-            <Ionicons name="barbell-outline" size={24} color="#0041c8" />
-          </View>
-          <View style={styles.habitCardContent}>
-            <Text style={styles.habitCardTitle}>Morning Workout</Text>
-            <Text style={styles.habitCardStreak}>0 day streak</Text>
-          </View>
-          <View style={styles.checkCircleEmpty}>
-            <Ionicons name="checkmark" size={20} color="#c3c5d9" />
-          </View>
-        </View>
+                <View style={styles.habitCardContent}>
+                  <Text
+                    style={[styles.habitCardTitle, isDark && styles.textDark]}
+                    numberOfLines={1}
+                  >
+                    {habit.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.habitCardStreak,
+                      isCompletedToday && { color: '#0041c8' },
+                    ]}
+                  >
+                    {isCompletedToday
+                      ? `✓ Done today · ${habit.streak} day streak`
+                      : `${habit.streak} day streak`}
+                  </Text>
+                </View>
 
-        <View style={styles.habitCard}>
-          <View style={[styles.habitIconBox, { backgroundColor: '#e9f2fb' }]}>
-            <Ionicons name="body-outline" size={24} color="#0041c8" />
-          </View>
-          <View style={styles.habitCardContent}>
-            <Text style={styles.habitCardTitle}>Meditation</Text>
-            <Text style={styles.habitCardStreak}>2 day streak</Text>
-          </View>
-          <View style={styles.checkCircleEmpty}>
-            <Ionicons name="checkmark" size={20} color="#c3c5d9" />
-          </View>
-        </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    completeHabit(
+                      habit.id,
+                      habit.streak,
+                      habit.last_completed_date
+                    )
+                  }
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <View
+                    style={
+                      isCompletedToday
+                        ? styles.checkCircleActive
+                        : styles.checkCircleEmpty
+                    }
+                  >
+                    <Ionicons
+                      name="checkmark"
+                      size={18}
+                      color={isCompletedToday ? '#ffffff' : '#c3c5d9'}
+                    />
+                  </View>
+                </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={{ marginLeft: 12 }}
+                  onPress={() => deleteHabit(habit.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#c3c5d9" />
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="repeat-outline" size={56} color="#dbe4ed" />
+            <Text style={styles.emptyTitle}>No habits yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Build consistency by tracking a habit daily. Tap below to create
+              your first one.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
+      {/* Add Habit Button */}
       <View style={styles.fabContainer}>
-        <TouchableOpacity style={styles.fabPill}>
+        <TouchableOpacity
+          style={styles.fabPill}
+          onPress={() => setModalVisible(true)}
+        >
           <Ionicons name="add" size={20} color="#0041c8" />
           <Text style={styles.fabText}>NEW HABIT</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Add Habit Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setModalVisible(false)}
+            activeOpacity={1}
+          />
+          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+              New Habit
+            </Text>
+            <TextInput
+              style={[styles.modalInput, isDark && styles.modalInputDark]}
+              placeholder="What habit do you want to build?"
+              placeholderTextColor="#c3c5d9"
+              value={newHabitTitle}
+              onChangeText={setNewHabitTitle}
+              autoFocus
+              onSubmitEditing={handleAddHabit}
+              returnKeyType="done"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalBtnCancel}
+                onPress={() => {
+                  setModalVisible(false);
+                  setNewHabitTitle('');
+                }}
+              >
+                <Text style={styles.modalBtnTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtnAdd,
+                  !newHabitTitle.trim() && styles.modalBtnDisabled,
+                ]}
+                onPress={handleAddHabit}
+                disabled={!newHabitTitle.trim() || isAdding}
+              >
+                <Text style={styles.modalBtnTextAdd}>
+                  {isAdding ? 'Adding…' : 'Add Habit'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -140,41 +286,293 @@ export default function HabitsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6faff' },
   containerDark: { backgroundColor: '#141d23' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
-  headerTitle: { fontFamily: 'Manrope', fontSize: 20, fontWeight: '700', color: '#141d23' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  headerTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#141d23',
+  },
   textDark: { color: '#ffffff' },
   textDarkSecondary: { color: '#c3c5d9' },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
-  pageTitle: { fontFamily: 'Manrope', fontSize: 48, fontWeight: '700', color: '#141d23', marginBottom: 8, letterSpacing: -0.96 },
-  pageSubtitle: { fontFamily: 'Manrope', fontSize: 18, color: '#434656', marginBottom: 32 },
-  statsRow: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  statCard: { flex: 1, backgroundColor: '#ffffff', borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 1 },
-  statLabel: { fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: '500', color: '#141d23', letterSpacing: 1.2, marginBottom: 8 },
-  statValue: { fontFamily: 'Manrope', fontSize: 24, fontWeight: '700', color: '#0041c8' },
-  weekCard: { backgroundColor: '#ffffff', borderRadius: 24, padding: 24, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.03, shadowRadius: 40, elevation: 2 },
-  weekHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  weekTitle: { fontFamily: 'Manrope', fontSize: 20, fontWeight: '600', color: '#141d23' },
-  weekDateBox: { flexDirection: 'row', alignItems: 'center' },
-  weekDateText: { fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: '600', color: '#0041c8', letterSpacing: 1.2 },
-  daysRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  dayCol: { alignItems: 'center' },
-  dayName: { fontFamily: 'JetBrains Mono', fontSize: 12, color: '#434656', marginBottom: 12 },
-  dayCirclePast: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e9f2fb', alignItems: 'center', justifyContent: 'center' },
-  dayDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0041c8' },
-  dayCircleMissed: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e1e3e4', alignItems: 'center', justifyContent: 'center' },
-  dayDotMissed: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#c3c5d9' },
-  dayCircleActive: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#0041c8', alignItems: 'center', justifyContent: 'center', shadowColor: '#0041c8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 3 },
-  dayActiveText: { fontFamily: 'Manrope', fontSize: 16, fontWeight: '700', color: '#ffffff' },
-  dayCircleFuture: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#e1e3e4', alignItems: 'center', justifyContent: 'center' },
-  dayFutureText: { fontFamily: 'Manrope', fontSize: 16, color: '#c3c5d9' },
-  habitCard: { backgroundColor: '#ffffff', borderRadius: 24, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 1 },
-  habitIconBox: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
-  habitCardContent: { flex: 1 },
-  habitCardTitle: { fontFamily: 'Manrope', fontSize: 18, fontWeight: '600', color: '#141d23', marginBottom: 4 },
-  habitCardStreak: { fontFamily: 'Manrope', fontSize: 14, color: '#434656' },
-  checkCircleEmpty: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: '#dbe4ed', alignItems: 'center', justifyContent: 'center' },
-  checkCircleActive: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#0041c8', alignItems: 'center', justifyContent: 'center', shadowColor: '#0041c8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3 },
-  fabContainer: { position: 'absolute', bottom: 32, left: 0, right: 0, alignItems: 'center' },
-  fabPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e9f2fb', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 32, borderWidth: 1, borderColor: '#dbe4ed', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  fabText: { fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: '600', color: '#0041c8', letterSpacing: 1.2, marginLeft: 8 },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 120,
+    flexGrow: 1,
+  },
+  pageTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 42,
+    fontWeight: '700',
+    color: '#141d23',
+    marginBottom: 8,
+    letterSpacing: -0.84,
+    marginTop: 16,
+  },
+  pageSubtitle: {
+    fontFamily: 'Manrope',
+    fontSize: 17,
+    color: '#434656',
+    marginBottom: 28,
+    lineHeight: 26,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  statCardDark: { backgroundColor: '#293138' },
+  statCardHighlight: {
+    backgroundColor: '#e9f2fb',
+    borderWidth: 1,
+    borderColor: '#dbe4ed',
+  },
+  statValue: {
+    fontFamily: 'Manrope',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#141d23',
+    letterSpacing: -0.64,
+  },
+  statLabel: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 10,
+    color: '#737688',
+    letterSpacing: 0.8,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  weekCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  weekCardDark: { backgroundColor: '#293138' },
+  weekTitle: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 11,
+    color: '#434656',
+    letterSpacing: 1.2,
+    marginBottom: 14,
+  },
+  weekDays: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dayItem: { alignItems: 'center', gap: 6 },
+  dayLabel: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 11,
+    color: '#737688',
+    letterSpacing: 0.5,
+  },
+  dayDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f0f3f8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayDotToday: { backgroundColor: '#0041c8' },
+  dayDotPast: { backgroundColor: '#dbe4ed' },
+  habitCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  habitCardDark: { backgroundColor: '#293138' },
+  habitIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  habitCardContent: { flex: 1, marginRight: 12 },
+  habitCardTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#141d23',
+    marginBottom: 4,
+  },
+  habitCardStreak: {
+    fontFamily: 'Manrope',
+    fontSize: 13,
+    color: '#737688',
+  },
+  checkCircleEmpty: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#dbe4ed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkCircleActive: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#0041c8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0041c8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  emptyTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#141d23',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: 'Manrope',
+    fontSize: 15,
+    color: '#737688',
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 280,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 32,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  fabPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e9f2fb',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: '#dbe4ed',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  fabText: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0041c8',
+    letterSpacing: 1.2,
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 24,
+    paddingBottom: 40,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  modalContentDark: { backgroundColor: '#293138' },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#dbe4ed',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#141d23',
+    marginBottom: 20,
+  },
+  modalInput: {
+    backgroundColor: '#f6faff',
+    borderWidth: 1,
+    borderColor: '#dbe4ed',
+    borderRadius: 14,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: 'Manrope',
+    color: '#141d23',
+    marginBottom: 24,
+  },
+  modalInputDark: {
+    backgroundColor: '#141d23',
+    borderColor: '#434656',
+    color: '#ffffff',
+  },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  modalBtnCancel: { padding: 14 },
+  modalBtnTextCancel: {
+    color: '#737688',
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  modalBtnAdd: {
+    backgroundColor: '#0041c8',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  modalBtnDisabled: { backgroundColor: '#c3c5d9' },
+  modalBtnTextAdd: {
+    color: '#fff',
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    fontSize: 16,
+  },
 });

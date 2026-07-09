@@ -1,126 +1,245 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, ImageBackground } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useAppTheme } from '@/context/ThemeContext';
 import { useStore } from '@/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 
+const CARD_COLORS = ['#141d23', '#0041c8', '#293138', '#1a2b3c', '#343a40'];
+
 export default function GoalsScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === 'dark';
-  
-  const { goals } = useStore();
-  const [filter, setFilter] = useState('Active');
+
+  const { goals, addGoal, deleteGoal, updateGoalProgress } = useStore();
+  const [filter, setFilter] = useState<'Active' | 'Achieved'>('Active');
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddGoal = async () => {
+    if (!newGoalTitle.trim() || isAdding) return;
+    setIsAdding(true);
+    await addGoal(newGoalTitle.trim());
+    setNewGoalTitle('');
+    setModalVisible(false);
+    setIsAdding(false);
+  };
+
+  const filteredGoals = goals.filter((g) => {
+    if (filter === 'Active') return g.progress < 100;
+    return g.progress >= 100;
+  });
 
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-      
+      {/* Header */}
       <View style={styles.header}>
         <Ionicons name="apps-outline" size={24} color="#0041c8" />
         <Text style={[styles.headerTitle, isDark && styles.textDark]}>Elevate</Text>
         <Ionicons name="notifications-outline" size={24} color="#0041c8" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={[styles.pageTitle, isDark && styles.textDark]}>Goals</Text>
-        <Text style={[styles.pageSubtitle, isDark && styles.textDarkSecondary]}>Track your major milestones and stay focused on your long-term vision.</Text>
+        <Text style={[styles.pageSubtitle, isDark && styles.textDarkSecondary]}>
+          Track your major milestones and stay focused on your long-term vision.
+        </Text>
 
+        {/* Filter pills */}
         <View style={styles.filterRow}>
-          {['Active', 'Achieved'].map(f => (
-            <TouchableOpacity 
+          {(['Active', 'Achieved'] as const).map((f) => (
+            <TouchableOpacity
               key={f}
               style={[styles.filterChip, filter === f && styles.filterChipActive]}
               onPress={() => setFilter(f)}
             >
-              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>{f}</Text>
+              <Text
+                style={[styles.filterText, filter === f && styles.filterTextActive]}
+              >
+                {f}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={[styles.goalCard, { backgroundColor: '#141d23' }]}>
-          <View style={styles.goalCardHeader}>
-            <View style={styles.goalTag}>
-              <Ionicons name="fitness-outline" size={14} color="#ffffff" style={{marginRight: 4}} />
-              <Text style={styles.goalTagText}>Health</Text>
-            </View>
-            <TouchableOpacity style={styles.menuBtn}>
-              <Ionicons name="ellipsis-horizontal" size={16} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.goalCardBottom}>
-            <Text style={styles.goalTitleText}>Run a Full{'\n'}Marathon</Text>
-            
-            <View style={styles.goalProgressRow}>
-              <Text style={styles.goalProgressText}>40% Completed</Text>
-              <Text style={styles.goalDateText}>Oct 15, 2024</Text>
-            </View>
-            
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '40%' }]} />
-            </View>
-          </View>
-        </View>
+        {/* Goals */}
+        {filteredGoals.length > 0 ? (
+          filteredGoals.map((goal, index) => (
+            <View
+              key={goal.id}
+              style={[
+                styles.goalCard,
+                { backgroundColor: CARD_COLORS[index % CARD_COLORS.length] },
+              ]}
+            >
+              {/* Top row: tag + delete */}
+              <View style={styles.goalCardHeader}>
+                <View style={styles.goalTag}>
+                  <Ionicons
+                    name={goal.progress >= 100 ? 'trophy-outline' : 'flag-outline'}
+                    size={12}
+                    color="#ffffff"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.goalTagText}>
+                    {goal.progress >= 100 ? 'ACHIEVED' : 'ACTIVE'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => deleteGoal(goal.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={16} color="rgba(255,255,255,0.7)" />
+                </TouchableOpacity>
+              </View>
 
-        <View style={[styles.goalCard, { backgroundColor: '#293138' }]}>
-          <View style={styles.goalCardHeader}>
-            <View style={styles.goalTag}>
-              <Ionicons name="book-outline" size={14} color="#ffffff" style={{marginRight: 4}} />
-              <Text style={styles.goalTagText}>Mind</Text>
-            </View>
-            <TouchableOpacity style={styles.menuBtn}>
-              <Ionicons name="ellipsis-horizontal" size={16} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.goalCardBottom}>
-            <Text style={styles.goalTitleText}>Read 50 Non-{'\n'}Fiction Books</Text>
-            
-            <View style={styles.goalProgressRow}>
-              <Text style={styles.goalProgressText}>65% Completed</Text>
-              <Text style={styles.goalDateText}>Dec 31, 2024</Text>
-            </View>
-            
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '65%' }]} />
-            </View>
-          </View>
-        </View>
+              {/* Title */}
+              <Text style={styles.goalTitleText} numberOfLines={3}>
+                {goal.title}
+              </Text>
 
-        <View style={[styles.goalCard, { backgroundColor: '#1a2b3c' }]}>
-          <View style={styles.goalCardHeader}>
-            <View style={styles.goalTag}>
-              <Ionicons name="rocket-outline" size={14} color="#ffffff" style={{marginRight: 4}} />
-              <Text style={styles.goalTagText}>Career</Text>
-            </View>
-            <TouchableOpacity style={styles.menuBtn}>
-              <Ionicons name="ellipsis-horizontal" size={16} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.goalCardBottom}>
-            <Text style={styles.goalTitleText}>Launch V1 of Tech{'\n'}Startup</Text>
-            
-            <View style={styles.goalProgressRow}>
-              <Text style={styles.goalProgressText}>20% Completed</Text>
-              <Text style={styles.goalDateText}>Mar 01, 2025</Text>
-            </View>
-            
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '20%' }]} />
-            </View>
-          </View>
-        </View>
+              {/* Progress */}
+              <View style={styles.goalProgressRow}>
+                <Text style={styles.goalProgressText}>{goal.progress}% COMPLETE</Text>
+                <View style={styles.progressControls}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      updateGoalProgress(goal.id, Math.max(0, goal.progress - 10))
+                    }
+                    disabled={goal.progress === 0}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Ionicons
+                      name="remove-circle-outline"
+                      size={26}
+                      color={goal.progress === 0 ? 'rgba(255,255,255,0.3)' : '#ffffff'}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() =>
+                      updateGoalProgress(goal.id, Math.min(100, goal.progress + 10))
+                    }
+                    disabled={goal.progress >= 100}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={26}
+                      color={goal.progress >= 100 ? 'rgba(255,255,255,0.3)' : '#ffffff'}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-        <TouchableOpacity style={styles.createCard}>
+              {/* Progress bar */}
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[styles.progressBarFill, { width: `${goal.progress}%` }]}
+                />
+              </View>
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="flag-outline" size={56} color="#dbe4ed" />
+            <Text style={styles.emptyTitle}>
+              {filter === 'Active' ? 'No active goals' : 'No achieved goals yet'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {filter === 'Active'
+                ? 'Define what you are working towards. Tap below to set your first goal.'
+                : 'Keep pushing — your first achievement is just around the corner.'}
+            </Text>
+          </View>
+        )}
+
+        {/* Create new goal card */}
+        <TouchableOpacity
+          style={styles.createCard}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.7}
+        >
           <View style={styles.createIconBox}>
-            <Ionicons name="add" size={24} color="#0041c8" />
+            <Ionicons name="add" size={26} color="#0041c8" />
           </View>
           <Text style={styles.createText}>Create New Goal</Text>
         </TouchableOpacity>
-
       </ScrollView>
 
+      {/* Add Goal Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setModalVisible(false)}
+            activeOpacity={1}
+          />
+          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>New Goal</Text>
+            <TextInput
+              style={[styles.modalInput, isDark && styles.modalInputDark]}
+              placeholder="What is your long-term goal?"
+              placeholderTextColor="#c3c5d9"
+              value={newGoalTitle}
+              onChangeText={setNewGoalTitle}
+              autoFocus
+              multiline
+              numberOfLines={2}
+              onSubmitEditing={handleAddGoal}
+              returnKeyType="done"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalBtnCancel}
+                onPress={() => {
+                  setModalVisible(false);
+                  setNewGoalTitle('');
+                }}
+              >
+                <Text style={styles.modalBtnTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtnAdd,
+                  !newGoalTitle.trim() && styles.modalBtnDisabled,
+                ]}
+                onPress={handleAddGoal}
+                disabled={!newGoalTitle.trim() || isAdding}
+              >
+                <Text style={styles.modalBtnTextAdd}>
+                  {isAdding ? 'Adding…' : 'Add Goal'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -128,31 +247,246 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6faff' },
   containerDark: { backgroundColor: '#141d23' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
-  headerTitle: { fontFamily: 'Manrope', fontSize: 20, fontWeight: '700', color: '#141d23' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  headerTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#141d23',
+  },
   textDark: { color: '#ffffff' },
   textDarkSecondary: { color: '#c3c5d9' },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
-  pageTitle: { fontFamily: 'Manrope', fontSize: 48, fontWeight: '700', color: '#141d23', marginBottom: 8, letterSpacing: -0.96 },
-  pageSubtitle: { fontFamily: 'Manrope', fontSize: 18, color: '#434656', marginBottom: 24, lineHeight: 28 },
-  filterRow: { flexDirection: 'row', backgroundColor: '#e9f2fb', borderRadius: 24, padding: 4, marginBottom: 32, alignSelf: 'flex-start' },
-  filterChip: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20 },
-  filterChipActive: { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-  filterText: { fontFamily: 'JetBrains Mono', fontSize: 12, color: '#737688', fontWeight: '500', letterSpacing: 1.2 },
-  filterTextActive: { color: '#0041c8', fontWeight: '600' },
-  goalCard: { height: 280, borderRadius: 24, padding: 24, marginBottom: 16, justifyContent: 'space-between', overflow: 'hidden' },
-  goalCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  goalTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  goalTagText: { fontFamily: 'JetBrains Mono', fontSize: 10, color: '#ffffff', letterSpacing: 1.2, fontWeight: '500' },
-  menuBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  goalCardBottom: { marginTop: 'auto' },
-  goalTitleText: { fontFamily: 'Manrope', fontSize: 32, fontWeight: '600', color: '#ffffff', lineHeight: 36, marginBottom: 24 },
-  goalProgressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  goalProgressText: { fontFamily: 'JetBrains Mono', fontSize: 12, color: '#0055ff', fontWeight: '600', letterSpacing: 1.2 },
-  goalDateText: { fontFamily: 'JetBrains Mono', fontSize: 12, color: '#0055ff', fontWeight: '600', letterSpacing: 1.2 },
-  progressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3 },
-  progressBarFill: { height: '100%', backgroundColor: '#0055ff', borderRadius: 3 },
-  createCard: { height: 200, borderRadius: 24, borderWidth: 2, borderColor: '#dbe4ed', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginTop: 16 },
-  createIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#e9f2fb', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  createText: { fontFamily: 'Manrope', fontSize: 18, color: '#141d23', fontWeight: '500' },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 120, flexGrow: 1 },
+  pageTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 42,
+    fontWeight: '700',
+    color: '#141d23',
+    marginBottom: 8,
+    letterSpacing: -0.84,
+    marginTop: 16,
+  },
+  pageSubtitle: {
+    fontFamily: 'Manrope',
+    fontSize: 17,
+    color: '#434656',
+    marginBottom: 24,
+    lineHeight: 26,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    backgroundColor: '#e9f2fb',
+    borderRadius: 999,
+    padding: 4,
+    marginBottom: 32,
+    alignSelf: 'flex-start',
+    gap: 4,
+  },
+  filterChip: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 999 },
+  filterChipActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  filterText: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 11,
+    color: '#737688',
+    fontWeight: '500',
+    letterSpacing: 1.0,
+  },
+  filterTextActive: { color: '#0041c8', fontWeight: '700' },
+  goalCard: {
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 16,
+    minHeight: 240,
+    justifyContent: 'space-between',
+  },
+  goalCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  goalTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  goalTagText: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 10,
+    color: '#ffffff',
+    letterSpacing: 1.2,
+    fontWeight: '600',
+  },
+  deleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalTitleText: {
+    fontFamily: 'Manrope',
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#ffffff',
+    lineHeight: 36,
+    flex: 1,
+    marginBottom: 20,
+  },
+  goalProgressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  goalProgressText: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    letterSpacing: 1.0,
+  },
+  progressControls: { flexDirection: 'row', gap: 12 },
+  progressBarBg: {
+    height: 5,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 999,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 999,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingTop: 40,
+    paddingBottom: 32,
+  },
+  emptyTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#141d23',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: 'Manrope',
+    fontSize: 15,
+    color: '#737688',
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  createCard: {
+    height: 160,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#dbe4ed',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  createIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#e9f2fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  createText: {
+    fontFamily: 'Manrope',
+    fontSize: 17,
+    color: '#141d23',
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 24,
+    paddingBottom: 40,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  modalContentDark: { backgroundColor: '#293138' },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#dbe4ed',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontFamily: 'Manrope',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#141d23',
+    marginBottom: 20,
+  },
+  modalInput: {
+    backgroundColor: '#f6faff',
+    borderWidth: 1,
+    borderColor: '#dbe4ed',
+    borderRadius: 14,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: 'Manrope',
+    color: '#141d23',
+    marginBottom: 24,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  modalInputDark: {
+    backgroundColor: '#141d23',
+    borderColor: '#434656',
+    color: '#ffffff',
+  },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  modalBtnCancel: { padding: 14 },
+  modalBtnTextCancel: {
+    color: '#737688',
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  modalBtnAdd: {
+    backgroundColor: '#0041c8',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  modalBtnDisabled: { backgroundColor: '#c3c5d9' },
+  modalBtnTextAdd: {
+    color: '#fff',
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    fontSize: 16,
+  },
 });
