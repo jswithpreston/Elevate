@@ -1,44 +1,44 @@
-import React, { useState } from 'react';
+import { useAppTheme } from "@/context/ThemeContext";
+import { useStore } from "@/store/useStore";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-  Modal,
-  TextInput,
   KeyboardAvoidingView,
+  Modal,
   Platform,
-} from 'react-native';
-import { useAppTheme } from '@/context/ThemeContext';
-import { useStore } from '@/store/useStore';
-import { Ionicons } from '@expo/vector-icons';
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-const CARD_COLORS = ['#141d23', '#0041c8', '#293138', '#1a2b3c', '#343a40'];
+const CARD_COLORS = ["#141d23", "#0041c8", "#293138", "#1a2b3c", "#343a40"];
 
 export default function GoalsScreen() {
   const { activeTheme } = useAppTheme();
-  const isDark = activeTheme === 'dark';
+  const isDark = activeTheme === "dark";
 
   const { goals, addGoal, deleteGoal, updateGoalProgress } = useStore();
-  const [filter, setFilter] = useState<'Active' | 'Achieved'>('Active');
+  const [filter, setFilter] = useState<"Active" | "Achieved">("Active");
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalTitle, setNewGoalTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddGoal = async () => {
     if (!newGoalTitle.trim() || isAdding) return;
     setIsAdding(true);
     await addGoal(newGoalTitle.trim());
-    setNewGoalTitle('');
+    setNewGoalTitle("");
     setModalVisible(false);
     setIsAdding(false);
   };
 
   const filteredGoals = goals.filter((g) => {
-    if (filter === 'Active') return g.progress < 100;
+    if (filter === "Active") return g.progress < 100;
     return g.progress >= 100;
   });
 
@@ -47,7 +47,9 @@ export default function GoalsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Ionicons name="apps-outline" size={24} color="#0041c8" />
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>Elevate</Text>
+        <Text style={[styles.headerTitle, isDark && styles.textDark]}>
+          Elevate
+        </Text>
         <Ionicons name="notifications-outline" size={24} color="#0041c8" />
       </View>
 
@@ -63,14 +65,20 @@ export default function GoalsScreen() {
 
         {/* Filter pills */}
         <View style={styles.filterRow}>
-          {(['Active', 'Achieved'] as const).map((f) => (
+          {(["Active", "Achieved"] as const).map((f) => (
             <TouchableOpacity
               key={f}
-              style={[styles.filterChip, filter === f && styles.filterChipActive]}
+              style={[
+                styles.filterChip,
+                filter === f && styles.filterChipActive,
+              ]}
               onPress={() => setFilter(f)}
             >
               <Text
-                style={[styles.filterText, filter === f && styles.filterTextActive]}
+                style={[
+                  styles.filterText,
+                  filter === f && styles.filterTextActive,
+                ]}
               >
                 {f}
               </Text>
@@ -92,13 +100,15 @@ export default function GoalsScreen() {
               <View style={styles.goalCardHeader}>
                 <View style={styles.goalTag}>
                   <Ionicons
-                    name={goal.progress >= 100 ? 'trophy-outline' : 'flag-outline'}
+                    name={
+                      goal.progress >= 100 ? "trophy-outline" : "flag-outline"
+                    }
                     size={12}
                     color="#ffffff"
                     style={{ marginRight: 6 }}
                   />
                   <Text style={styles.goalTagText}>
-                    {goal.progress >= 100 ? 'ACHIEVED' : 'ACTIVE'}
+                    {goal.progress >= 100 ? "ACHIEVED" : "ACTIVE"}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -106,7 +116,11 @@ export default function GoalsScreen() {
                   onPress={() => deleteGoal(goal.id)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="trash-outline" size={16} color="rgba(255,255,255,0.7)" />
+                  <Ionicons
+                    name="trash-outline"
+                    size={16}
+                    color="rgba(255,255,255,0.7)"
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -117,11 +131,16 @@ export default function GoalsScreen() {
 
               {/* Progress */}
               <View style={styles.goalProgressRow}>
-                <Text style={styles.goalProgressText}>{goal.progress}% COMPLETE</Text>
+                <Text style={styles.goalProgressText}>
+                  {goal.progress}% COMPLETE
+                </Text>
                 <View style={styles.progressControls}>
                   <TouchableOpacity
                     onPress={() =>
-                      updateGoalProgress(goal.id, Math.max(0, goal.progress - 10))
+                      updateGoalProgress(
+                        goal.id,
+                        Math.max(0, goal.progress - 10),
+                      )
                     }
                     disabled={goal.progress === 0}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -129,12 +148,19 @@ export default function GoalsScreen() {
                     <Ionicons
                       name="remove-circle-outline"
                       size={26}
-                      color={goal.progress === 0 ? 'rgba(255,255,255,0.3)' : '#ffffff'}
+                      color={
+                        goal.progress === 0
+                          ? "rgba(255,255,255,0.3)"
+                          : "#ffffff"
+                      }
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() =>
-                      updateGoalProgress(goal.id, Math.min(100, goal.progress + 10))
+                      updateGoalProgress(
+                        goal.id,
+                        Math.min(100, goal.progress + 10),
+                      )
                     }
                     disabled={goal.progress >= 100}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -142,7 +168,11 @@ export default function GoalsScreen() {
                     <Ionicons
                       name="add-circle-outline"
                       size={26}
-                      color={goal.progress >= 100 ? 'rgba(255,255,255,0.3)' : '#ffffff'}
+                      color={
+                        goal.progress >= 100
+                          ? "rgba(255,255,255,0.3)"
+                          : "#ffffff"
+                      }
                     />
                   </TouchableOpacity>
                 </View>
@@ -151,7 +181,10 @@ export default function GoalsScreen() {
               {/* Progress bar */}
               <View style={styles.progressBarBg}>
                 <View
-                  style={[styles.progressBarFill, { width: `${goal.progress}%` }]}
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${goal.progress}%` },
+                  ]}
                 />
               </View>
             </View>
@@ -160,12 +193,14 @@ export default function GoalsScreen() {
           <View style={styles.emptyState}>
             <Ionicons name="flag-outline" size={56} color="#dbe4ed" />
             <Text style={styles.emptyTitle}>
-              {filter === 'Active' ? 'No active goals' : 'No achieved goals yet'}
+              {filter === "Active"
+                ? "No active goals"
+                : "No achieved goals yet"}
             </Text>
             <Text style={styles.emptySubtitle}>
-              {filter === 'Active'
-                ? 'Define what you are working towards. Tap below to set your first goal.'
-                : 'Keep pushing — your first achievement is just around the corner.'}
+              {filter === "Active"
+                ? "Define what you are working towards. Tap below to set your first goal."
+                : "Keep pushing — your first achievement is just around the corner."}
             </Text>
           </View>
         )}
@@ -192,16 +227,20 @@ export default function GoalsScreen() {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
             onPress={() => setModalVisible(false)}
             activeOpacity={1}
           />
-          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
             <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, isDark && styles.textDark]}>New Goal</Text>
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+              New Goal
+            </Text>
             <TextInput
               style={[styles.modalInput, isDark && styles.modalInputDark]}
               placeholder="What is your long-term goal?"
@@ -219,7 +258,7 @@ export default function GoalsScreen() {
                 style={styles.modalBtnCancel}
                 onPress={() => {
                   setModalVisible(false);
-                  setNewGoalTitle('');
+                  setNewGoalTitle("");
                 }}
               >
                 <Text style={styles.modalBtnTextCancel}>Cancel</Text>
@@ -233,7 +272,7 @@ export default function GoalsScreen() {
                 disabled={!newGoalTitle.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
-                  {isAdding ? 'Adding…' : 'Add Goal'}
+                  {isAdding ? "Adding…" : "Add Goal"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -245,154 +284,154 @@ export default function GoalsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6faff' },
-  containerDark: { backgroundColor: '#141d23' },
+  container: { flex: 1, paddingTop: 20, backgroundColor: "#f6faff" },
+  containerDark: { backgroundColor: "#141d23" },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 8,
   },
   headerTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 20,
-    fontWeight: '700',
-    color: '#141d23',
+    fontWeight: "700",
+    color: "#141d23",
   },
-  textDark: { color: '#ffffff' },
-  textDarkSecondary: { color: '#c3c5d9' },
+  textDark: { color: "#ffffff" },
+  textDarkSecondary: { color: "#c3c5d9" },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 120, flexGrow: 1 },
   pageTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 42,
-    fontWeight: '700',
-    color: '#141d23',
+    fontWeight: "700",
+    color: "#141d23",
     marginBottom: 8,
     letterSpacing: -0.84,
     marginTop: 16,
   },
   pageSubtitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 17,
-    color: '#434656',
+    color: "#434656",
     marginBottom: 24,
     lineHeight: 26,
   },
   filterRow: {
-    flexDirection: 'row',
-    backgroundColor: '#e9f2fb',
+    flexDirection: "row",
+    backgroundColor: "#e9f2fb",
     borderRadius: 999,
     padding: 4,
     marginBottom: 32,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     gap: 4,
   },
   filterChip: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 999 },
   filterChipActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 2,
   },
   filterText: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 11,
-    color: '#737688',
-    fontWeight: '500',
+    color: "#737688",
+    fontWeight: "500",
     letterSpacing: 1.0,
   },
-  filterTextActive: { color: '#0041c8', fontWeight: '700' },
+  filterTextActive: { color: "#0041c8", fontWeight: "700" },
   goalCard: {
     borderRadius: 24,
     padding: 24,
     marginBottom: 16,
     minHeight: 240,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   goalCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 24,
   },
   goalTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,
   },
   goalTagText: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 10,
-    color: '#ffffff',
+    color: "#ffffff",
     letterSpacing: 1.2,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   deleteBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   goalTitleText: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 28,
-    fontWeight: '600',
-    color: '#ffffff',
+    fontWeight: "600",
+    color: "#ffffff",
     lineHeight: 36,
     flex: 1,
     marginBottom: 20,
   },
   goalProgressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   goalProgressText: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '600',
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "600",
     letterSpacing: 1.0,
   },
-  progressControls: { flexDirection: 'row', gap: 12 },
+  progressControls: { flexDirection: "row", gap: 12 },
   progressBarBg: {
     height: 5,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 999,
   },
   progressBarFill: {
-    height: '100%',
-    backgroundColor: '#ffffff',
+    height: "100%",
+    backgroundColor: "#ffffff",
     borderRadius: 999,
   },
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 40,
     paddingBottom: 32,
   },
   emptyTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 20,
-    fontWeight: '600',
-    color: '#141d23',
+    fontWeight: "600",
+    color: "#141d23",
     marginTop: 20,
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 15,
-    color: '#737688',
-    textAlign: 'center',
+    color: "#737688",
+    textAlign: "center",
     lineHeight: 22,
     maxWidth: 300,
   },
@@ -400,10 +439,10 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: '#dbe4ed',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#dbe4ed",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
     marginBottom: 24,
   },
@@ -411,82 +450,82 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#e9f2fb',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#e9f2fb",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 14,
   },
   createText: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 17,
-    color: '#141d23',
-    fontWeight: '500',
+    color: "#141d23",
+    fontWeight: "500",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 24,
     paddingBottom: 40,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
   },
-  modalContentDark: { backgroundColor: '#293138' },
+  modalContentDark: { backgroundColor: "#293138" },
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#dbe4ed',
+    backgroundColor: "#dbe4ed",
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 20,
   },
   modalTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 22,
-    fontWeight: '700',
-    color: '#141d23',
+    fontWeight: "700",
+    color: "#141d23",
     marginBottom: 20,
   },
   modalInput: {
-    backgroundColor: '#f6faff',
+    backgroundColor: "#f6faff",
     borderWidth: 1,
-    borderColor: '#dbe4ed',
+    borderColor: "#dbe4ed",
     borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    fontFamily: 'Manrope',
-    color: '#141d23',
+    fontFamily: "Manrope",
+    color: "#141d23",
     marginBottom: 24,
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   modalInputDark: {
-    backgroundColor: '#141d23',
-    borderColor: '#434656',
-    color: '#ffffff',
+    backgroundColor: "#141d23",
+    borderColor: "#434656",
+    color: "#ffffff",
   },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
   modalBtnCancel: { padding: 14 },
   modalBtnTextCancel: {
-    color: '#737688',
-    fontFamily: 'Manrope',
-    fontWeight: '600',
+    color: "#737688",
+    fontFamily: "Manrope",
+    fontWeight: "600",
     fontSize: 16,
   },
   modalBtnAdd: {
-    backgroundColor: '#0041c8',
+    backgroundColor: "#0041c8",
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 14,
   },
-  modalBtnDisabled: { backgroundColor: '#c3c5d9' },
+  modalBtnDisabled: { backgroundColor: "#c3c5d9" },
   modalBtnTextAdd: {
-    color: '#fff',
-    fontFamily: 'Manrope',
-    fontWeight: '700',
+    color: "#fff",
+    fontFamily: "Manrope",
+    fontWeight: "700",
     fontSize: 16,
   },
 });

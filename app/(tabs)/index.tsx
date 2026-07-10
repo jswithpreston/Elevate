@@ -1,41 +1,43 @@
-import React, { useEffect, useState } from 'react';
+import { useAppTheme } from "@/context/ThemeContext";
+import { supabase } from "@/lib/supabase";
+import { useStore } from "@/store/useStore";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
   SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-} from 'react-native';
-import { useAppTheme } from '@/context/ThemeContext';
-import { useStore } from '@/store/useStore';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+  View,
+} from "react-native";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning,';
-  if (hour < 17) return 'Good afternoon,';
-  return 'Good evening,';
+  if (hour < 12) return "Good morning,";
+  if (hour < 17) return "Good afternoon,";
+  return "Good evening,";
 }
 
 export default function HomeScreen() {
   const { activeTheme } = useAppTheme();
-  const isDark = activeTheme === 'dark';
+  const isDark = activeTheme === "dark";
 
   const { tasks, habits, goals, fetchData } = useStore();
-  const [firstName, setFirstName] = useState('');
+  const [firstName, setFirstName] = useState("");
 
   // Format date: THURSDAY, OCT 26
   const dateOpts: Intl.DateTimeFormatOptions = {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
+    weekday: "long",
+    month: "short",
+    day: "numeric",
   };
-  const dateStr = new Date().toLocaleDateString('en-US', dateOpts).toUpperCase();
+  const dateStr = new Date()
+    .toLocaleDateString("en-US", dateOpts)
+    .toUpperCase();
   const greeting = getGreeting();
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     fetchData();
@@ -44,10 +46,10 @@ export default function HomeScreen() {
       const fullName: string =
         user.user_metadata?.full_name ||
         user.user_metadata?.name ||
-        user.email?.split('@')[0] ||
-        '';
+        user.email?.split("@")[0] ||
+        "";
       // Use only the first name
-      const first = fullName.trim().split(' ')[0] || '';
+      const first = fullName.trim().split(" ")[0] || "";
       setFirstName(first);
     });
   }, []);
@@ -55,7 +57,8 @@ export default function HomeScreen() {
   // Daily goals met = completed tasks / total tasks (percentage)
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.completed).length;
-  const dailyPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const dailyPercent =
+    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // Top 3 incomplete tasks for "Top Priorities"
   const topTasks = tasks.filter((t) => !t.completed).slice(0, 3);
@@ -67,10 +70,14 @@ export default function HomeScreen() {
   const upcomingTasks = tasks.filter((t) => !t.completed).slice(3, 5);
 
   const progressMessage = () => {
-    if (totalTasks === 0) return "Add your first tasks to start tracking your day.";
-    if (dailyPercent === 100) return "Incredible! You've completed all your tasks for today. 🎉";
-    if (dailyPercent >= 75) return "Great progress! You're almost there. Keep pushing.";
-    if (dailyPercent >= 50) return "You're making solid progress. Maintain focus to complete your primary objectives.";
+    if (totalTasks === 0)
+      return "Add your first tasks to start tracking your day.";
+    if (dailyPercent === 100)
+      return "Incredible! You've completed all your tasks for today. 🎉";
+    if (dailyPercent >= 75)
+      return "Great progress! You're almost there. Keep pushing.";
+    if (dailyPercent >= 50)
+      return "You're making solid progress. Maintain focus to complete your primary objectives.";
     return "A great day starts with a single step. You've got this!";
   };
 
@@ -83,7 +90,9 @@ export default function HomeScreen() {
         {/* Top Nav */}
         <View style={styles.topNav}>
           <Ionicons name="apps-outline" size={24} color="#0041c8" />
-          <Text style={[styles.navTitle, isDark && styles.textDark]}>Elevate</Text>
+          <Text style={[styles.navTitle, isDark && styles.textDark]}>
+            Elevate
+          </Text>
           <Ionicons name="notifications-outline" size={24} color="#0041c8" />
         </View>
 
@@ -93,12 +102,16 @@ export default function HomeScreen() {
             {dateStr}
           </Text>
           <Text style={[styles.greeting, isDark && styles.textDark]}>
-            {greeting}{'\n'}{firstName ? `${firstName}.` : ''}
+            {greeting}
+            {"\n"}
+            {firstName ? `${firstName}.` : ""}
           </Text>
         </View>
 
         {/* Daily Progress Ring */}
-        <View style={[styles.progressSection, isDark && styles.progressSectionDark]}>
+        <View
+          style={[styles.progressSection, isDark && styles.progressSectionDark]}
+        >
           <View style={styles.ringWrapper}>
             <View style={styles.ringOuter}>
               <View style={styles.ringInner}>
@@ -106,20 +119,29 @@ export default function HomeScreen() {
                   {dailyPercent}
                   <Text style={styles.progressPercent}>%</Text>
                 </Text>
-                <Text style={[styles.progressLabel, isDark && styles.textDarkSecondary]}>
+                <Text
+                  style={[
+                    styles.progressLabel,
+                    isDark && styles.textDarkSecondary,
+                  ]}
+                >
                   Daily Goals Met
                 </Text>
               </View>
             </View>
           </View>
-          <Text style={[styles.progressText, isDark && styles.textDarkSecondary]}>
+          <Text
+            style={[styles.progressText, isDark && styles.textDarkSecondary]}
+          >
             {progressMessage()}
           </Text>
         </View>
 
         {/* Top Priorities */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, isDark && styles.textDarkSecondary]}>
+          <Text
+            style={[styles.sectionTitle, isDark && styles.textDarkSecondary]}
+          >
             TOP PRIORITIES
           </Text>
         </View>
@@ -127,17 +149,20 @@ export default function HomeScreen() {
         {topTasks.length > 0 ? (
           <View style={styles.prioritiesList}>
             {topTasks.map((task, i) => (
-              <View key={task.id} style={[styles.card, isDark && styles.cardDark]}>
+              <View
+                key={task.id}
+                style={[styles.card, isDark && styles.cardDark]}
+              >
                 <View
                   style={[
                     styles.iconBox,
-                    { backgroundColor: i === 0 ? '#0041c8' : '#e1e3e4' },
+                    { backgroundColor: i === 0 ? "#0041c8" : "#e1e3e4" },
                   ]}
                 >
                   <Ionicons
-                    name={i === 0 ? 'star-outline' : 'ellipse-outline'}
+                    name={i === 0 ? "star-outline" : "ellipse-outline"}
                     size={22}
-                    color={i === 0 ? '#fff' : '#626566'}
+                    color={i === 0 ? "#fff" : "#626566"}
                   />
                 </View>
                 <View style={styles.cardContent}>
@@ -146,7 +171,9 @@ export default function HomeScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => useStore.getState().toggleTask(task.id, task.completed)}
+                  onPress={() =>
+                    useStore.getState().toggleTask(task.id, task.completed)
+                  }
                 >
                   <View style={styles.radioEmpty} />
                 </TouchableOpacity>
@@ -162,10 +189,12 @@ export default function HomeScreen() {
 
         {/* Habit Progress */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, isDark && styles.textDarkSecondary]}>
+          <Text
+            style={[styles.sectionTitle, isDark && styles.textDarkSecondary]}
+          >
             HABIT PROGRESS
           </Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/habits')}>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/habits")}>
             <Text style={styles.editLink}>EDIT</Text>
           </TouchableOpacity>
         </View>
@@ -184,20 +213,24 @@ export default function HomeScreen() {
                   key={habit.id}
                   style={[
                     styles.habitCard,
-                    { backgroundColor: done ? '#0041c8' : '#ffffff' },
+                    { backgroundColor: done ? "#0041c8" : "#ffffff" },
                     !done && styles.habitCardEmpty,
                   ]}
                   onPress={() =>
                     useStore
                       .getState()
-                      .completeHabit(habit.id, habit.streak, habit.last_completed_date)
+                      .completeHabit(
+                        habit.id,
+                        habit.streak,
+                        habit.last_completed_date,
+                      )
                   }
                 >
                   <View style={styles.habitCardHeader}>
                     <Ionicons
                       name="sync-outline"
                       size={20}
-                      color={done ? '#fff' : '#434656'}
+                      color={done ? "#fff" : "#434656"}
                     />
                     {done && (
                       <Ionicons
@@ -209,7 +242,10 @@ export default function HomeScreen() {
                   </View>
                   <View>
                     <Text
-                      style={[styles.habitCardTitle, !done && { color: '#141d23' }]}
+                      style={[
+                        styles.habitCardTitle,
+                        !done && { color: "#141d23" },
+                      ]}
                       numberOfLines={1}
                     >
                       {habit.title}
@@ -217,7 +253,7 @@ export default function HomeScreen() {
                     <Text
                       style={[
                         styles.habitCardSubtitle,
-                        !done && { color: '#434656' },
+                        !done && { color: "#434656" },
                       ]}
                     >
                       {habit.streak} day streak
@@ -230,17 +266,21 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="repeat-outline" size={32} color="#c3c5d9" />
-            <Text style={styles.emptyText}>No habits yet. Add one to get started.</Text>
+            <Text style={styles.emptyText}>
+              No habits yet. Add one to get started.
+            </Text>
           </View>
         )}
 
         {/* Upcoming Tasks */}
         <View style={[styles.tasksContainer, isDark && styles.cardDark]}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionTitle, isDark && styles.textDarkSecondary]}>
+            <Text
+              style={[styles.sectionTitle, isDark && styles.textDarkSecondary]}
+            >
               UPCOMING TASKS
             </Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/tasks')}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/tasks")}>
               <Text style={styles.editLink}>VIEW ALL</Text>
             </TouchableOpacity>
           </View>
@@ -262,14 +302,16 @@ export default function HomeScreen() {
                     {task.title}
                   </Text>
                 </View>
-                {i < upcomingTasks.length - 1 && <View style={styles.taskDivider} />}
+                {i < upcomingTasks.length - 1 && (
+                  <View style={styles.taskDivider} />
+                )}
               </View>
             ))
           ) : (
             <Text style={styles.emptyText}>
               {tasks.length === 0
-                ? 'No tasks yet. Head to Tasks to add some.'
-                : 'All tasks are in your Top Priorities section.'}
+                ? "No tasks yet. Head to Tasks to add some."
+                : "All tasks are in your Top Priorities section."}
             </Text>
           )}
         </View>
@@ -277,7 +319,7 @@ export default function HomeScreen() {
         {/* Quote */}
         <View style={styles.quoteSection}>
           <Text style={styles.quoteText}>
-            "Consistency is what transforms average into excellence."
+            {"Consistency is what transforms average into excellence."}
           </Text>
         </View>
       </ScrollView>
@@ -286,154 +328,154 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6faff' },
-  containerDark: { backgroundColor: '#141d23' },
+  container: { flex: 1, paddingTop: 20, backgroundColor: "#f6faff" },
+  containerDark: { backgroundColor: "#141d23" },
   scrollContent: { paddingBottom: 120 },
   topNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 8,
   },
   navTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 20,
-    fontWeight: '700',
-    color: '#141d23',
+    fontWeight: "700",
+    color: "#141d23",
   },
   header: { paddingHorizontal: 24, marginBottom: 32, marginTop: 8 },
   dateLabel: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     letterSpacing: 1.2,
-    color: '#434656',
+    color: "#434656",
     marginBottom: 12,
   },
   greeting: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 42,
-    fontWeight: '700',
+    fontWeight: "700",
     lineHeight: 48,
-    color: '#141d23',
+    color: "#141d23",
     letterSpacing: -0.84,
   },
-  textDark: { color: '#ffffff' },
-  textDarkSecondary: { color: '#c3c5d9' },
+  textDark: { color: "#ffffff" },
+  textDarkSecondary: { color: "#c3c5d9" },
   progressSection: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 24,
     padding: 32,
-    alignItems: 'center',
+    alignItems: "center",
     marginHorizontal: 24,
     marginBottom: 32,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.03,
     shadowRadius: 40,
     elevation: 2,
   },
-  progressSectionDark: { backgroundColor: '#293138' },
+  progressSectionDark: { backgroundColor: "#293138" },
   ringWrapper: { marginBottom: 24 },
   ringOuter: {
     width: 180,
     height: 180,
     borderRadius: 90,
     borderWidth: 14,
-    borderColor: '#0041c8',
-    borderTopColor: '#e1e3e4',
-    borderRightColor: '#e1e3e4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '135deg' }],
+    borderColor: "#0041c8",
+    borderTopColor: "#e1e3e4",
+    borderRightColor: "#e1e3e4",
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "135deg" }],
   },
   ringInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '-135deg' }],
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "-135deg" }],
   },
   progressValue: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 48,
-    fontWeight: '700',
-    color: '#141d23',
+    fontWeight: "700",
+    color: "#141d23",
   },
   progressPercent: { fontSize: 22 },
   progressLabel: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 11,
-    color: '#434656',
+    color: "#434656",
     letterSpacing: 0.5,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   progressText: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 15,
-    color: '#434656',
-    textAlign: 'center',
+    color: "#434656",
+    textAlign: "center",
     lineHeight: 24,
   },
   sectionHeader: { paddingHorizontal: 24, marginBottom: 16 },
   sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     marginBottom: 16,
   },
   sectionTitle: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     letterSpacing: 1.2,
-    color: '#434656',
+    color: "#434656",
   },
   editLink: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 1.2,
-    color: '#0041c8',
+    color: "#0041c8",
   },
   prioritiesList: { marginBottom: 32, paddingHorizontal: 24 },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 24,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.03,
     shadowRadius: 40,
     elevation: 2,
   },
-  cardDark: { backgroundColor: '#293138' },
+  cardDark: { backgroundColor: "#293138" },
   iconBox: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 16,
   },
   cardContent: { flex: 1 },
   cardTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 18,
-    fontWeight: '600',
-    color: '#141d23',
+    fontWeight: "600",
+    color: "#141d23",
   },
   radioEmpty: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#c3c5d9',
+    borderColor: "#c3c5d9",
   },
   habitScroll: { marginBottom: 32 },
   habitScrollContent: { paddingHorizontal: 24, gap: 16 },
@@ -442,69 +484,78 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 24,
     padding: 20,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   habitCardEmpty: {
     borderWidth: 1,
-    borderColor: '#e1e3e4',
-    shadowColor: '#000',
+    borderColor: "#e1e3e4",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.02,
     shadowRadius: 10,
     elevation: 1,
   },
   habitCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   habitCardTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 18,
-    fontWeight: '600',
-    color: '#ffffff',
+    fontWeight: "600",
+    color: "#ffffff",
     marginBottom: 4,
   },
   habitCardSubtitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
   },
   tasksContainer: {
-    backgroundColor: '#ecf5fe',
+    backgroundColor: "#ecf5fe",
     borderRadius: 24,
     padding: 24,
     marginHorizontal: 24,
     marginBottom: 32,
   },
   taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
   },
   taskText: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 16,
-    color: '#141d23',
+    color: "#141d23",
     marginLeft: 16,
     flex: 1,
   },
-  taskDivider: { height: 1, backgroundColor: '#dbe4ed', marginLeft: 40 },
-  emptyState: { alignItems: 'center', paddingVertical: 24, marginBottom: 32, paddingHorizontal: 24 },
+  taskDivider: { height: 1, backgroundColor: "#dbe4ed", marginLeft: 40 },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 24,
+    marginBottom: 32,
+    paddingHorizontal: 24,
+  },
   emptyText: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 15,
-    color: '#737688',
-    textAlign: 'center',
+    color: "#737688",
+    textAlign: "center",
     marginTop: 8,
   },
-  quoteSection: { paddingVertical: 24, paddingHorizontal: 24, alignItems: 'center' },
+  quoteSection: {
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    alignItems: "center",
+  },
   quoteText: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 16,
-    fontStyle: 'italic',
-    color: '#434656',
-    textAlign: 'center',
+    fontStyle: "italic",
+    color: "#434656",
+    textAlign: "center",
     lineHeight: 25.6,
   },
 });

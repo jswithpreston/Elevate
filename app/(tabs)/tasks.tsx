@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
+import { useAppTheme } from "@/context/ThemeContext";
+import { useStore } from "@/store/useStore";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { useAppTheme } from '@/context/ThemeContext';
-import { useStore } from '@/store/useStore';
-import { Ionicons } from '@expo/vector-icons';
+  View,
+} from "react-native";
 
 function formatRelativeTime(dateString: string): string {
   const now = new Date();
   const date = new Date(dateString);
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'Just now';
+  if (diffMins < 1) return "Just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
@@ -30,21 +30,21 @@ function formatRelativeTime(dateString: string): string {
 
 export default function TasksScreen() {
   const { activeTheme } = useAppTheme();
-  const isDark = activeTheme === 'dark';
+  const isDark = activeTheme === "dark";
 
   const { tasks, addTask, toggleTask, deleteTask } = useStore();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("All");
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim() || isAdding) return;
     setIsAdding(true);
     await addTask(newTaskTitle.trim());
-    setNewTaskTitle('');
+    setNewTaskTitle("");
     setModalVisible(false);
     setIsAdding(false);
   };
@@ -56,8 +56,8 @@ export default function TasksScreen() {
     ) {
       return false;
     }
-    if (filter === 'Pending' && task.completed) return false;
-    if (filter === 'Completed' && !task.completed) return false;
+    if (filter === "Pending" && task.completed) return false;
+    if (filter === "Completed" && !task.completed) return false;
     return true;
   });
 
@@ -69,20 +69,22 @@ export default function TasksScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Ionicons name="apps-outline" size={24} color="#0041c8" />
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>Tasks</Text>
+        <Text style={[styles.headerTitle, isDark && styles.textDark]}>
+          Tasks
+        </Text>
         <Ionicons name="notifications-outline" size={24} color="#0041c8" />
       </View>
 
       {/* Summary row */}
       {tasks.length > 0 && (
         <View style={styles.summaryRow}>
-          <View style={[styles.summaryChip, { backgroundColor: '#e9f2fb' }]}>
-            <Text style={[styles.summaryChipText, { color: '#0041c8' }]}>
+          <View style={[styles.summaryChip, { backgroundColor: "#e9f2fb" }]}>
+            <Text style={[styles.summaryChipText, { color: "#0041c8" }]}>
               {pendingCount} PENDING
             </Text>
           </View>
-          <View style={[styles.summaryChip, { backgroundColor: '#e6eff8' }]}>
-            <Text style={[styles.summaryChipText, { color: '#434656' }]}>
+          <View style={[styles.summaryChip, { backgroundColor: "#e6eff8" }]}>
+            <Text style={[styles.summaryChipText, { color: "#434656" }]}>
               {completedCount} DONE
             </Text>
           </View>
@@ -90,8 +92,15 @@ export default function TasksScreen() {
       )}
 
       {/* Search */}
-      <View style={[styles.searchContainer, isDark && styles.searchContainerDark]}>
-        <Ionicons name="search-outline" size={18} color="#737688" style={styles.searchIcon} />
+      <View
+        style={[styles.searchContainer, isDark && styles.searchContainerDark]}
+      >
+        <Ionicons
+          name="search-outline"
+          size={18}
+          color="#737688"
+          style={styles.searchIcon}
+        />
         <TextInput
           style={[styles.searchInput, isDark && styles.searchInputDark]}
           placeholder="Search tasks..."
@@ -100,7 +109,7 @@ export default function TasksScreen() {
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => setSearchQuery("")}>
             <Ionicons name="close-circle" size={18} color="#737688" />
           </TouchableOpacity>
         )}
@@ -108,14 +117,17 @@ export default function TasksScreen() {
 
       {/* Filter pills */}
       <View style={styles.filterRow}>
-        {['All', 'Pending', 'Completed'].map((f) => (
+        {["All", "Pending", "Completed"].map((f) => (
           <TouchableOpacity
             key={f}
             style={[styles.filterChip, filter === f && styles.filterChipActive]}
             onPress={() => setFilter(f)}
           >
             <Text
-              style={[styles.filterText, filter === f && styles.filterTextActive]}
+              style={[
+                styles.filterText,
+                filter === f && styles.filterTextActive,
+              ]}
             >
               {f}
             </Text>
@@ -140,10 +152,7 @@ export default function TasksScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <View
-                  style={[
-                    styles.radio,
-                    task.completed && styles.radioFilled,
-                  ]}
+                  style={[styles.radio, task.completed && styles.radioFilled]}
                 >
                   {task.completed && (
                     <Ionicons name="checkmark" size={14} color="#fff" />
@@ -179,33 +188,36 @@ export default function TasksScreen() {
           <View style={styles.emptyState}>
             <Ionicons
               name={
-                filter === 'Completed'
-                  ? 'checkmark-circle-outline'
-                  : 'document-text-outline'
+                filter === "Completed"
+                  ? "checkmark-circle-outline"
+                  : "document-text-outline"
               }
               size={56}
               color="#dbe4ed"
             />
             <Text style={styles.emptyTitle}>
-              {filter === 'All' && tasks.length === 0
-                ? 'No tasks yet'
-                : filter === 'Completed'
-                ? 'No completed tasks'
-                : 'All caught up!'}
+              {filter === "All" && tasks.length === 0
+                ? "No tasks yet"
+                : filter === "Completed"
+                  ? "No completed tasks"
+                  : "All caught up!"}
             </Text>
             <Text style={styles.emptySubtitle}>
-              {filter === 'All' && tasks.length === 0
-                ? 'Tap + to add your first task.'
-                : filter === 'Pending'
-                ? 'You have no pending tasks right now.'
-                : 'Complete a task to see it here.'}
+              {filter === "All" && tasks.length === 0
+                ? "Tap + to add your first task."
+                : filter === "Pending"
+                  ? "You have no pending tasks right now."
+                  : "Complete a task to see it here."}
             </Text>
           </View>
         )}
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setModalVisible(true)}
+      >
         <Ionicons name="add" size={30} color="#ffffff" />
       </TouchableOpacity>
 
@@ -218,16 +230,20 @@ export default function TasksScreen() {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
             onPress={() => setModalVisible(false)}
             activeOpacity={1}
           />
-          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
             <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, isDark && styles.textDark]}>New Task</Text>
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+              New Task
+            </Text>
             <TextInput
               style={[styles.modalInput, isDark && styles.modalInputDark]}
               placeholder="What do you need to do?"
@@ -243,7 +259,7 @@ export default function TasksScreen() {
                 style={styles.modalBtnCancel}
                 onPress={() => {
                   setModalVisible(false);
-                  setNewTaskTitle('');
+                  setNewTaskTitle("");
                 }}
               >
                 <Text style={styles.modalBtnTextCancel}>Cancel</Text>
@@ -257,7 +273,7 @@ export default function TasksScreen() {
                 disabled={!newTaskTitle.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
-                  {isAdding ? 'Adding…' : 'Add Task'}
+                  {isAdding ? "Adding…" : "Add Task"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -269,25 +285,25 @@ export default function TasksScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6faff' },
-  containerDark: { backgroundColor: '#141d23' },
+  container: { flex: 1, paddingTop: 20, backgroundColor: "#f6faff" },
+  containerDark: { backgroundColor: "#141d23" },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 16,
   },
   headerTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 24,
-    fontWeight: '700',
-    color: '#141d23',
+    fontWeight: "700",
+    color: "#141d23",
   },
-  textDark: { color: '#ffffff' },
+  textDark: { color: "#ffffff" },
   summaryRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 24,
     marginBottom: 16,
     gap: 8,
@@ -298,34 +314,34 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   summaryChipText: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 0.8,
   },
   searchContainer: {
     marginHorizontal: 24,
     marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ecf5fe',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ecf5fe",
     borderRadius: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#dbe4ed',
+    borderColor: "#dbe4ed",
   },
-  searchContainerDark: { backgroundColor: '#293138', borderColor: '#434656' },
+  searchContainerDark: { backgroundColor: "#293138", borderColor: "#434656" },
   searchIcon: { marginRight: 8 },
   searchInput: {
     flex: 1,
     paddingVertical: 13,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 15,
-    color: '#141d23',
+    color: "#141d23",
   },
-  searchInputDark: { color: '#ffffff' },
+  searchInputDark: { color: "#ffffff" },
   filterRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 24,
     marginBottom: 24,
     gap: 10,
@@ -335,96 +351,96 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#dbe4ed',
-    backgroundColor: '#ffffff',
+    borderColor: "#dbe4ed",
+    backgroundColor: "#ffffff",
   },
-  filterChipActive: { backgroundColor: '#0041c8', borderColor: '#0041c8' },
+  filterChipActive: { backgroundColor: "#0041c8", borderColor: "#0041c8" },
   filterText: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 11,
-    color: '#434656',
+    color: "#434656",
     letterSpacing: 0.5,
   },
-  filterTextActive: { color: '#ffffff' },
+  filterTextActive: { color: "#ffffff" },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 120, flexGrow: 1 },
   taskCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 20,
     padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,
     shadowRadius: 12,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f0f3f8',
+    borderColor: "#f0f3f8",
   },
-  taskCardDark: { backgroundColor: '#293138', borderColor: '#434656' },
+  taskCardDark: { backgroundColor: "#293138", borderColor: "#434656" },
   radio: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#c3c5d9',
+    borderColor: "#c3c5d9",
     marginRight: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  radioFilled: { backgroundColor: '#0041c8', borderColor: '#0041c8' },
+  radioFilled: { backgroundColor: "#0041c8", borderColor: "#0041c8" },
   taskCardContent: { flex: 1, marginRight: 12 },
   taskCardTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 16,
-    fontWeight: '500',
-    color: '#141d23',
+    fontWeight: "500",
+    color: "#141d23",
     marginBottom: 4,
     lineHeight: 22,
   },
   taskCardTitleCompleted: {
-    textDecorationLine: 'line-through',
-    color: '#c3c5d9',
+    textDecorationLine: "line-through",
+    color: "#c3c5d9",
   },
   taskCardTime: {
-    fontFamily: 'JetBrains Mono',
+    fontFamily: "JetBrains Mono",
     fontSize: 11,
-    color: '#737688',
+    color: "#737688",
     letterSpacing: 0.3,
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingTop: 80,
   },
   emptyTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 20,
-    fontWeight: '600',
-    color: '#141d23',
+    fontWeight: "600",
+    color: "#141d23",
     marginTop: 20,
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 15,
-    color: '#737688',
-    textAlign: 'center',
+    color: "#737688",
+    textAlign: "center",
     lineHeight: 22,
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 32,
     right: 24,
     width: 62,
     height: 62,
     borderRadius: 20,
-    backgroundColor: '#0041c8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0041c8',
+    backgroundColor: "#0041c8",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#0041c8",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
@@ -432,67 +448,67 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 24,
     paddingBottom: 40,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
   },
-  modalContentDark: { backgroundColor: '#293138' },
+  modalContentDark: { backgroundColor: "#293138" },
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#dbe4ed',
+    backgroundColor: "#dbe4ed",
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 20,
   },
   modalTitle: {
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     fontSize: 22,
-    fontWeight: '700',
-    color: '#141d23',
+    fontWeight: "700",
+    color: "#141d23",
     marginBottom: 20,
   },
   modalInput: {
-    backgroundColor: '#f6faff',
+    backgroundColor: "#f6faff",
     borderWidth: 1,
-    borderColor: '#dbe4ed',
+    borderColor: "#dbe4ed",
     borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    fontFamily: 'Manrope',
-    color: '#141d23',
+    fontFamily: "Manrope",
+    color: "#141d23",
     marginBottom: 24,
   },
   modalInputDark: {
-    backgroundColor: '#141d23',
-    borderColor: '#434656',
-    color: '#ffffff',
+    backgroundColor: "#141d23",
+    borderColor: "#434656",
+    color: "#ffffff",
   },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
   modalBtnCancel: { padding: 14 },
   modalBtnTextCancel: {
-    color: '#737688',
-    fontFamily: 'Manrope',
-    fontWeight: '600',
+    color: "#737688",
+    fontFamily: "Manrope",
+    fontWeight: "600",
     fontSize: 16,
   },
   modalBtnAdd: {
-    backgroundColor: '#0041c8',
+    backgroundColor: "#0041c8",
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 14,
   },
-  modalBtnDisabled: { backgroundColor: '#c3c5d9' },
+  modalBtnDisabled: { backgroundColor: "#c3c5d9" },
   modalBtnTextAdd: {
-    color: '#fff',
-    fontFamily: 'Manrope',
-    fontWeight: '700',
+    color: "#fff",
+    fontFamily: "Manrope",
+    fontWeight: "700",
     fontSize: 16,
   },
 });
