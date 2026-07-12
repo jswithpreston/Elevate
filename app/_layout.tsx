@@ -1,5 +1,7 @@
+import { ThemeProvider as AppThemeProvider, useAppTheme } from "@/context/ThemeContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { supabase } from "@/lib/supabase";
+import { registerForPushNotificationsAsync } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
 import {
   DarkTheme,
@@ -15,8 +17,32 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
+function RootNavigation() {
+  const { activeTheme } = useAppTheme();
+  return (
+    <ThemeProvider value={activeTheme === "dark" ? DarkTheme : DefaultTheme}>
+      <Stack>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+        <Stack.Screen name="verify-code" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="set-new-password"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="modal"
+          options={{ presentation: "modal", title: "Modal" }}
+        />
+      </Stack>
+      <StatusBar style={activeTheme === "dark" ? "light" : "dark"} />
+    </ThemeProvider>
+  );
+}
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [session, setSession] = useState<any>(null);
   const [initialized, setInitialized] = useState(false);
   const router = useRouter();
@@ -27,12 +53,18 @@ export default function RootLayout() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setInitialized(true);
+      if (session) {
+        registerForPushNotificationsAsync();
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        registerForPushNotificationsAsync();
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -63,24 +95,8 @@ export default function RootLayout() {
   if (!initialized) return null;
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="sign-up" options={{ headerShown: false }} />
-        <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
-        <Stack.Screen name="verify-code" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="set-new-password"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
-        />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AppThemeProvider>
+      <RootNavigation />
+    </AppThemeProvider>
   );
 }

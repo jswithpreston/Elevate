@@ -1,3 +1,4 @@
+import GlobalHeader from "@/components/global-header";
 import QuickSwitcher from "@/components/quick-switcher";
 import { useAppTheme } from "@/context/ThemeContext";
 import { useStore } from "@/store/useStore";
@@ -57,32 +58,24 @@ export default function ProgressScreen() {
 
   const periodStart = useMemo(() => startOfPeriod(period), [period]);
 
+  // Tasks completed in this period (since we don't have a completedAt field,
+  // we estimate by filtering tasks that are completed and created within the period)
   const completedTasksInPeriod = useMemo(() => {
     return tasks.filter((t: any) => {
-      if (!t.completed || !t.completedAt) return false;
-      const completedDate = new Date(t.completedAt);
-      return completedDate >= periodStart;
+      if (!t.completed) return false;
+      const createdDate = new Date(t.created_at);
+      return createdDate >= periodStart;
     });
   }, [tasks, periodStart]);
 
+  // Average focus time isn't tracked yet — placeholder
   const avgFocusTime = useMemo(() => {
-    const totalMinutes = completedTasksInPeriod.reduce(
-      (sum: number, t: any) => sum + (t.focusMinutes ?? 0),
-      0,
-    );
-    const activeDays = new Set(
-      completedTasksInPeriod.map((t: any) =>
-        new Date(t.completedAt).toDateString(),
-      ),
-    ).size;
-    if (activeDays === 0) return { hours: 0, minutes: 0 };
-    const avgMinutes = Math.round(totalMinutes / activeDays);
-    return { hours: Math.floor(avgMinutes / 60), minutes: avgMinutes % 60 };
-  }, [completedTasksInPeriod]);
+    return { hours: 0, minutes: 0 };
+  }, []);
 
   const goalCompletionRate = useMemo(() => {
     if (goals.length === 0) return 0;
-    const completedGoals = goals.filter((g: any) => g.completed).length;
+    const completedGoals = goals.filter((g: any) => g.progress >= 100).length;
     return Math.round((completedGoals / goals.length) * 100);
   }, [goals]);
 
@@ -90,8 +83,8 @@ export default function ProgressScreen() {
     const days = last7Days();
     return days.map((day) => {
       const count = tasks.filter((t: any) => {
-        if (!t.completed || !t.completedAt) return false;
-        return new Date(t.completedAt).toDateString() === day.toDateString();
+        if (!t.completed) return false;
+        return new Date(t.created_at).toDateString() === day.toDateString();
       }).length;
       return {
         label: day.toLocaleDateString(undefined, { weekday: "short" })[0],
@@ -109,38 +102,9 @@ export default function ProgressScreen() {
       edges={["top"]}
     >
       {/* Header */}
-      <View style={styles.headerbar}>
-        <TouchableOpacity onPress={() => setSwitcherVisible(true)}>
-          <Ionicons name="apps-outline" size={24} color="#0041c8" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>
-          Elevate
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.push("/notifications")}
-          style={styles.bellWrap}
-        >
-          <Ionicons name="notifications-outline" size={24} color="#0041c8" />
-          {unreadNotifications > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {unreadNotifications > 9 ? "9+" : unreadNotifications}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* Header */}
+      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} />
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{ marginRight: 16 }}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={isDark ? "#F9FAFB" : "#111827"}
-          />
-        </TouchableOpacity>
         <Text style={[styles.title, isDark && styles.textDark]}>Progress</Text>
       </View>
 

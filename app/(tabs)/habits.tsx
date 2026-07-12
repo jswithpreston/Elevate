@@ -1,6 +1,11 @@
+import DatePickerField from "@/components/date-picker-field";
+import GlobalHeader from "@/components/global-header";
+import QuickSwitcher from "@/components/quick-switcher";
 import { useAppTheme } from "@/context/ThemeContext";
+import { scheduleHabitReminder } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -20,10 +25,16 @@ const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 export default function HabitsScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
+  const router = useRouter();
+  const [switcherVisible, setSwitcherVisible] = useState(false);
 
   const { habits, addHabit, completeHabit, deleteHabit } = useStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [newHabitTitle, setNewHabitTitle] = useState("");
+  const [newHabitStartDate, setNewHabitStartDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [newHabitTime, setNewHabitTime] = useState("09:00");
   const [isAdding, setIsAdding] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
@@ -35,10 +46,13 @@ export default function HabitsScreen() {
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.streak), 0);
 
   const handleAddHabit = async () => {
-    if (!newHabitTitle.trim() || isAdding) return;
+    if (!newHabitTitle.trim() || !newHabitStartDate.trim() || isAdding) return;
     setIsAdding(true);
-    await addHabit(newHabitTitle.trim());
+    await addHabit(newHabitTitle.trim(), newHabitStartDate);
+    await scheduleHabitReminder(newHabitTitle.trim(), newHabitTitle.trim(), newHabitTime); // We use title as ID temporarily since store doesn't return ID directly
     setNewHabitTitle("");
+    setNewHabitStartDate(new Date().toISOString().split("T")[0]);
+    setNewHabitTime("09:00");
     setModalVisible(false);
     setIsAdding(false);
   };
@@ -46,13 +60,7 @@ export default function HabitsScreen() {
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Ionicons name="apps-outline" size={24} color="#0041c8" />
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>
-          Elevate
-        </Text>
-        <Ionicons name="notifications-outline" size={24} color="#0041c8" />
-      </View>
+      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -168,7 +176,7 @@ export default function HabitsScreen() {
                     ]}
                   >
                     {isCompletedToday
-                      ? `✓ Done today · ${habit.streak} day streak`
+                      ? `\u2713 Done today \u00b7 ${habit.streak} day streak`
                       : `${habit.streak} day streak`}
                   </Text>
                 </View>
@@ -247,8 +255,10 @@ export default function HabitsScreen() {
             onPress={() => setModalVisible(false)}
             activeOpacity={1}
           />
-          <View
+          <ScrollView
             style={[styles.modalContent, isDark && styles.modalContentDark]}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, isDark && styles.textDark]}>
@@ -261,8 +271,19 @@ export default function HabitsScreen() {
               value={newHabitTitle}
               onChangeText={setNewHabitTitle}
               autoFocus
-              onSubmitEditing={handleAddHabit}
-              returnKeyType="done"
+              returnKeyType="next"
+            />
+            <DatePickerField
+              label="START DATE"
+              value={newHabitStartDate}
+              onChange={setNewHabitStartDate}
+              mode="date"
+            />
+            <DatePickerField
+              label="REMINDER TIME"
+              value={newHabitTime}
+              onChange={setNewHabitTime}
+              mode="time"
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -270,6 +291,8 @@ export default function HabitsScreen() {
                 onPress={() => {
                   setModalVisible(false);
                   setNewHabitTitle("");
+                  setNewHabitStartDate(new Date().toISOString().split("T")[0]);
+                  setNewHabitTime("09:00");
                 }}
               >
                 <Text style={styles.modalBtnTextCancel}>Cancel</Text>
@@ -277,19 +300,24 @@ export default function HabitsScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtnAdd,
-                  !newHabitTitle.trim() && styles.modalBtnDisabled,
+                  (!newHabitTitle.trim() || !newHabitStartDate.trim()) && styles.modalBtnDisabled,
                 ]}
                 onPress={handleAddHabit}
-                disabled={!newHabitTitle.trim() || isAdding}
+                disabled={!newHabitTitle.trim() || !newHabitStartDate.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
-                  {isAdding ? "Adding…" : "Add Habit"}
+                  {isAdding ? "Adding\u2026" : "Add Habit"}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+      <QuickSwitcher
+        visible={switcherVisible}
+        onClose={() => setSwitcherVisible(false)}
+        currentRoute="habits"
+      />
     </SafeAreaView>
   );
 }
@@ -529,7 +557,6 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: "#fff",
     padding: 24,
-    paddingBottom: 40,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
   },
@@ -548,6 +575,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#141d23",
     marginBottom: 20,
+  },
+  modalLabel: {
+    fontFamily: "JetBrains Mono",
+    fontSize: 11,
+    color: "#434656",
+    letterSpacing: 1.2,
+    marginBottom: 8,
   },
   modalInput: {
     backgroundColor: "#f6faff",

@@ -1,6 +1,10 @@
+import DatePickerField from "@/components/date-picker-field";
+import GlobalHeader from "@/components/global-header";
+import QuickSwitcher from "@/components/quick-switcher";
 import { useAppTheme } from "@/context/ThemeContext";
 import { useStore } from "@/store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -17,22 +21,50 @@ import {
 
 const CARD_COLORS = ["#141d23", "#0041c8", "#293138", "#1a2b3c", "#343a40"];
 
+const CATEGORIES = ["Personal", "Career", "Health", "Finance", "Education"];
+const PRIORITIES = [
+  { label: "Low", value: "low" as const, color: "#737688" },
+  { label: "Medium", value: "medium" as const, color: "#F59E0B" },
+  { label: "High", value: "high" as const, color: "#EF4444" },
+];
+
 export default function GoalsScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
+  const router = useRouter();
+  const [switcherVisible, setSwitcherVisible] = useState(false);
 
   const { goals, addGoal, deleteGoal, updateGoalProgress } = useStore();
   const [filter, setFilter] = useState<"Active" | "Achieved">("Active");
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
+  const [newGoalDescription, setNewGoalDescription] = useState("");
+  const [newGoalCategory, setNewGoalCategory] = useState("");
+  const [newGoalPriority, setNewGoalPriority] = useState<
+    "low" | "medium" | "high"
+  >("medium");
+  const [newGoalStartDate, setNewGoalStartDate] = useState("");
+  const [newGoalTargetDate, setNewGoalTargetDate] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddGoal = async () => {
-    if (!newGoalTitle.trim() || isAdding) return;
+    if (!newGoalTitle.trim() || !newGoalStartDate.trim() || !newGoalTargetDate.trim() || isAdding) return;
     setIsAdding(true);
-    await addGoal(newGoalTitle.trim());
+    await addGoal(
+      newGoalTitle.trim(),
+      newGoalTargetDate,
+      newGoalStartDate,
+      newGoalDescription.trim() || undefined,
+      newGoalCategory || undefined,
+      newGoalPriority,
+    );
     setNewGoalTitle("");
+    setNewGoalDescription("");
+    setNewGoalCategory("");
+    setNewGoalPriority("medium");
+    setNewGoalStartDate("");
+    setNewGoalTargetDate("");
     setModalVisible(false);
     setIsAdding(false);
   };
@@ -45,13 +77,7 @@ export default function GoalsScreen() {
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Ionicons name="apps-outline" size={24} color="#0041c8" />
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>
-          Elevate
-        </Text>
-        <Ionicons name="notifications-outline" size={24} color="#0041c8" />
-      </View>
+      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -88,107 +114,150 @@ export default function GoalsScreen() {
 
         {/* Goals */}
         {filteredGoals.length > 0 ? (
-          filteredGoals.map((goal, index) => (
-            <View
-              key={goal.id}
-              style={[
-                styles.goalCard,
-                { backgroundColor: CARD_COLORS[index % CARD_COLORS.length] },
-              ]}
-            >
-              {/* Top row: tag + delete */}
-              <View style={styles.goalCardHeader}>
-                <View style={styles.goalTag}>
-                  <Ionicons
-                    name={
-                      goal.progress >= 100 ? "trophy-outline" : "flag-outline"
-                    }
-                    size={12}
-                    color="#ffffff"
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={styles.goalTagText}>
-                    {goal.progress >= 100 ? "ACHIEVED" : "ACTIVE"}
-                  </Text>
+          filteredGoals.map((goal, index) => {
+            const priorityInfo =
+              PRIORITIES.find((p) => p.value === goal.priority) ||
+              PRIORITIES[1];
+            return (
+              <View
+                key={goal.id}
+                style={[
+                  styles.goalCard,
+                  { backgroundColor: CARD_COLORS[index % CARD_COLORS.length] },
+                ]}
+              >
+                {/* Top row: tag + delete */}
+                <View style={styles.goalCardHeader}>
+                  <View style={styles.goalTag}>
+                    <Ionicons
+                      name={
+                        goal.progress >= 100 ? "trophy-outline" : "flag-outline"
+                      }
+                      size={12}
+                      color="#ffffff"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.goalTagText}>
+                      {goal.progress >= 100 ? "ACHIEVED" : "ACTIVE"}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => deleteGoal(goal.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={16}
+                      color="rgba(255,255,255,0.7)"
+                    />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => deleteGoal(goal.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={16}
-                    color="rgba(255,255,255,0.7)"
-                  />
-                </TouchableOpacity>
-              </View>
 
-              {/* Title */}
-              <Text style={styles.goalTitleText} numberOfLines={3}>
-                {goal.title}
-              </Text>
+                {/* Category & Priority badges */}
+                <View style={styles.goalBadgesRow}>
+                  {goal.category && (
+                    <View style={styles.goalBadge}>
+                      <Text style={styles.goalBadgeText}>{goal.category}</Text>
+                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.goalBadge,
+                      { backgroundColor: priorityInfo.color + "33" },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.goalBadgeText,
+                        { color: priorityInfo.color },
+                      ]}
+                    >
+                      {goal.priority.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
 
-              {/* Progress */}
-              <View style={styles.goalProgressRow}>
-                <Text style={styles.goalProgressText}>
-                  {goal.progress}% COMPLETE
+                {/* Title */}
+                <Text style={styles.goalTitleText} numberOfLines={2}>
+                  {goal.title}
                 </Text>
-                <View style={styles.progressControls}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      updateGoalProgress(
-                        goal.id,
-                        Math.max(0, goal.progress - 10),
-                      )
-                    }
-                    disabled={goal.progress === 0}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  >
-                    <Ionicons
-                      name="remove-circle-outline"
-                      size={26}
-                      color={
-                        goal.progress === 0
-                          ? "rgba(255,255,255,0.3)"
-                          : "#ffffff"
-                      }
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() =>
-                      updateGoalProgress(
-                        goal.id,
-                        Math.min(100, goal.progress + 10),
-                      )
-                    }
-                    disabled={goal.progress >= 100}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  >
-                    <Ionicons
-                      name="add-circle-outline"
-                      size={26}
-                      color={
-                        goal.progress >= 100
-                          ? "rgba(255,255,255,0.3)"
-                          : "#ffffff"
-                      }
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
 
-              {/* Progress bar */}
-              <View style={styles.progressBarBg}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    { width: `${goal.progress}%` },
-                  ]}
-                />
+                {/* Description */}
+                {goal.description && (
+                  <Text style={styles.goalDescriptionText} numberOfLines={2}>
+                    {goal.description}
+                  </Text>
+                )}
+
+                {/* Progress */}
+                <View style={styles.goalProgressRow}>
+                  <Text style={styles.goalProgressText}>
+                    {goal.progress}% COMPLETE
+                  </Text>
+                  <View style={styles.progressControls}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        updateGoalProgress(
+                          goal.id,
+                          Math.max(0, goal.progress - 10),
+                        )
+                      }
+                      disabled={goal.progress === 0}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Ionicons
+                        name="remove-circle-outline"
+                        size={26}
+                        color={
+                          goal.progress === 0
+                            ? "rgba(255,255,255,0.3)"
+                            : "#ffffff"
+                        }
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() =>
+                        updateGoalProgress(
+                          goal.id,
+                          Math.min(100, goal.progress + 10),
+                        )
+                      }
+                      disabled={goal.progress >= 100}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Ionicons
+                        name="add-circle-outline"
+                        size={26}
+                        color={
+                          goal.progress >= 100
+                            ? "rgba(255,255,255,0.3)"
+                            : "#ffffff"
+                        }
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Progress bar */}
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${goal.progress}%` },
+                    ]}
+                  />
+                </View>
+
+                {/* Target date */}
+                {goal.target_date && (
+                  <Text style={styles.goalDateText}>
+                    Target: {new Date(goal.target_date).toLocaleDateString()}
+                  </Text>
+                )}
               </View>
-            </View>
-          ))
+            );
+          })
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="flag-outline" size={56} color="#dbe4ed" />
@@ -200,7 +269,7 @@ export default function GoalsScreen() {
             <Text style={styles.emptySubtitle}>
               {filter === "Active"
                 ? "Define what you are working towards. Tap below to set your first goal."
-                : "Keep pushing — your first achievement is just around the corner."}
+                : "Keep pushing \u2014 your first achievement is just around the corner."}
             </Text>
           </View>
         )}
@@ -234,12 +303,21 @@ export default function GoalsScreen() {
             onPress={() => setModalVisible(false)}
             activeOpacity={1}
           />
-          <View
+          <ScrollView
             style={[styles.modalContent, isDark && styles.modalContentDark]}
+            contentContainerStyle={{ paddingBottom: 150 }}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, isDark && styles.textDark]}>
               New Goal
+            </Text>
+
+            {/* Goal Name */}
+            <Text
+              style={[styles.modalLabel, isDark && styles.textDarkSecondary]}
+            >
+              GOAL NAME
             </Text>
             <TextInput
               style={[styles.modalInput, isDark && styles.modalInputDark]}
@@ -248,17 +326,119 @@ export default function GoalsScreen() {
               value={newGoalTitle}
               onChangeText={setNewGoalTitle}
               autoFocus
-              multiline
-              numberOfLines={2}
-              onSubmitEditing={handleAddGoal}
-              returnKeyType="done"
+              returnKeyType="next"
             />
+
+            {/* Description */}
+            <Text
+              style={[styles.modalLabel, isDark && styles.textDarkSecondary]}
+            >
+              DESCRIPTION
+            </Text>
+            <TextInput
+              style={[
+                styles.modalInput,
+                styles.modalInputMultiline,
+                isDark && styles.modalInputDark,
+              ]}
+              placeholder="Describe your goal in detail..."
+              placeholderTextColor="#c3c5d9"
+              value={newGoalDescription}
+              onChangeText={setNewGoalDescription}
+              multiline
+              numberOfLines={3}
+              returnKeyType="next"
+            />
+
+            {/* Category */}
+            <Text
+              style={[styles.modalLabel, isDark && styles.textDarkSecondary]}
+            >
+              CATEGORY
+            </Text>
+            <View style={styles.categoryRow}>
+              {CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryChip,
+                    newGoalCategory === cat && styles.categoryChipActive,
+                  ]}
+                  onPress={() =>
+                    setNewGoalCategory(newGoalCategory === cat ? "" : cat)
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      newGoalCategory === cat && styles.categoryChipTextActive,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Priority */}
+            <Text
+              style={[styles.modalLabel, isDark && styles.textDarkSecondary]}
+            >
+              PRIORITY
+            </Text>
+            <View style={styles.categoryRow}>
+              {PRIORITIES.map((p) => (
+                <TouchableOpacity
+                  key={p.value}
+                  style={[
+                    styles.priorityChip,
+                    newGoalPriority === p.value && {
+                      backgroundColor: p.color + "20",
+                      borderColor: p.color,
+                    },
+                  ]}
+                  onPress={() => setNewGoalPriority(p.value)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      newGoalPriority === p.value && {
+                        color: p.color,
+                        fontWeight: "700",
+                      },
+                    ]}
+                  >
+                    {p.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Start Date */}
+            <DatePickerField
+              label="START DATE (OPTIONAL)"
+              value={newGoalStartDate}
+              onChange={setNewGoalStartDate}
+            />
+
+            {/* Target Date */}
+            <DatePickerField
+              label="TARGET DATE (OPTIONAL)"
+              value={newGoalTargetDate}
+              onChange={setNewGoalTargetDate}
+            />
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalBtnCancel}
                 onPress={() => {
                   setModalVisible(false);
                   setNewGoalTitle("");
+                  setNewGoalDescription("");
+                  setNewGoalCategory("");
+                  setNewGoalPriority("medium");
+                  setNewGoalStartDate("");
+                  setNewGoalTargetDate("");
                 }}
               >
                 <Text style={styles.modalBtnTextCancel}>Cancel</Text>
@@ -266,19 +446,24 @@ export default function GoalsScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtnAdd,
-                  !newGoalTitle.trim() && styles.modalBtnDisabled,
+                  (!newGoalTitle.trim() || !newGoalStartDate.trim() || !newGoalTargetDate.trim()) && styles.modalBtnDisabled,
                 ]}
                 onPress={handleAddGoal}
-                disabled={!newGoalTitle.trim() || isAdding}
+                disabled={!newGoalTitle.trim() || !newGoalStartDate.trim() || !newGoalTargetDate.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
-                  {isAdding ? "Adding…" : "Add Goal"}
+                  {isAdding ? "Adding\u2026" : "Add Goal"}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+      <QuickSwitcher
+        visible={switcherVisible}
+        onClose={() => setSwitcherVisible(false)}
+        currentRoute="goals"
+      />
     </SafeAreaView>
   );
 }
@@ -356,7 +541,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 12,
   },
   goalTag: {
     flexDirection: "row",
@@ -373,6 +558,24 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontWeight: "600",
   },
+  goalBadgesRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  goalBadge: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  goalBadgeText: {
+    fontFamily: "JetBrains Mono",
+    fontSize: 9,
+    color: "rgba(255,255,255,0.8)",
+    letterSpacing: 0.8,
+    fontWeight: "600",
+  },
   deleteBtn: {
     width: 34,
     height: 34,
@@ -387,8 +590,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#ffffff",
     lineHeight: 36,
-    flex: 1,
-    marginBottom: 20,
+    marginBottom: 8,
+  },
+  goalDescriptionText: {
+    fontFamily: "Manrope",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+    lineHeight: 20,
+    marginBottom: 16,
   },
   goalProgressRow: {
     flexDirection: "row",
@@ -408,11 +617,18 @@ const styles = StyleSheet.create({
     height: 5,
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 999,
+    marginBottom: 8,
   },
   progressBarFill: {
     height: "100%",
     backgroundColor: "#ffffff",
     borderRadius: 999,
+  },
+  goalDateText: {
+    fontFamily: "JetBrains Mono",
+    fontSize: 10,
+    color: "rgba(255,255,255,0.6)",
+    letterSpacing: 0.5,
   },
   emptyState: {
     alignItems: "center",
@@ -469,9 +685,9 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: "#fff",
     padding: 24,
-    paddingBottom: 40,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
+    maxHeight: "90%",
   },
   modalContentDark: { backgroundColor: "#293138" },
   modalHandle: {
@@ -489,6 +705,13 @@ const styles = StyleSheet.create({
     color: "#141d23",
     marginBottom: 20,
   },
+  modalLabel: {
+    fontFamily: "JetBrains Mono",
+    fontSize: 11,
+    color: "#434656",
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
   modalInput: {
     backgroundColor: "#f6faff",
     borderWidth: 1,
@@ -499,6 +722,8 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope",
     color: "#141d23",
     marginBottom: 24,
+  },
+  modalInputMultiline: {
     minHeight: 80,
     textAlignVertical: "top",
   },
@@ -506,6 +731,42 @@ const styles = StyleSheet.create({
     backgroundColor: "#141d23",
     borderColor: "#434656",
     color: "#ffffff",
+  },
+  categoryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 24,
+  },
+  categoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#dbe4ed",
+    backgroundColor: "#f6faff",
+  },
+  categoryChipActive: {
+    backgroundColor: "#e9f2fb",
+    borderColor: "#0041c8",
+  },
+  categoryChipText: {
+    fontFamily: "JetBrains Mono",
+    fontSize: 10,
+    color: "#737688",
+    fontWeight: "600",
+    letterSpacing: 0.8,
+  },
+  categoryChipTextActive: {
+    color: "#0041c8",
+  },
+  priorityChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#dbe4ed",
+    backgroundColor: "#f6faff",
   },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
   modalBtnCancel: { padding: 14 },

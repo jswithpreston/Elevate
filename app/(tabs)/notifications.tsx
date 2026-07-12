@@ -2,61 +2,11 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { BackHandler, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect } from "react";
 
-type NotificationType = "reminder" | "streak" | "achievement";
-
-type Notification = {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  createdAt: string; // ISO date
-  read: boolean;
-};
-
-// TODO: replace with real data from your store / Supabase table once wired up
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "1",
-    type: "reminder",
-    title: "Task due soon",
-    message: '"Finish weekly report" is due in 2 hours.',
-    createdAt: new Date().toISOString(),
-    read: false,
-  },
-  {
-    id: "2",
-    type: "streak",
-    title: "5-day streak!",
-    message: "You've completed your morning habit 5 days in a row.",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    read: false,
-  },
-  {
-    id: "3",
-    type: "achievement",
-    title: "Goal completed",
-    message: 'You reached your goal: "Read 12 books this year."',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    read: true,
-  },
-  {
-    id: "4",
-    type: "reminder",
-    title: "Habit check-in",
-    message: "Don't forget to log today's \"Drink water\" habit.",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    read: true,
-  },
-];
+import { useStore, NotificationType } from "@/store/useStore";
 
 const ICONS: Record<NotificationType, keyof typeof Ionicons.glyphMap> = {
   reminder: "alarm-outline",
@@ -84,18 +34,26 @@ export default function NotificationsScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
   const router = useRouter();
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useStore();
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
+  useEffect(() => {
+    const onBackPress = () => {
+      router.push("/(tabs)/profile");
+      return true;
+    };
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => subscription.remove();
+  }, []);
+
+  const markAsRead = async (id: string) => {
+    await markNotificationAsRead(id);
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    await markAllNotificationsAsRead();
   };
 
   return (
@@ -103,31 +61,35 @@ export default function NotificationsScreen() {
       style={[styles.container, isDark && styles.containerDark]}
       edges={["top"]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{ marginRight: 16 }}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={isDark ? "#F9FAFB" : "#111827"}
-          />
-        </TouchableOpacity>
-        <Text style={[styles.title, isDark && styles.textDark]}>
-          Notifications
-        </Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllAsRead} style={styles.markAllBtn}>
-            <Text style={styles.markAllText}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/profile")}
+              style={{ marginRight: 16 }}
+            >
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={isDark ? "#F9FAFB" : "#111827"}
+              />
+            </TouchableOpacity>
+            <Text style={[styles.title, isDark && styles.textDark]}>
+              Notifications
+            </Text>
+            {unreadCount > 0 && (
+              <TouchableOpacity
+                onPress={markAllAsRead}
+                style={styles.markAllBtn}
+              >
+                <Text style={styles.markAllText}>Mark all read</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        }
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -168,7 +130,7 @@ export default function NotificationsScreen() {
                 {item.message}
               </Text>
               <Text style={[styles.cardTime, isDark && styles.textDarkMuted]}>
-                {timeAgo(item.createdAt)}
+                {timeAgo(item.created_at)}
               </Text>
             </View>
           </TouchableOpacity>
@@ -196,7 +158,7 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, paddingTop: 40, backgroundColor: "#F8FAFC" },
   containerDark: { backgroundColor: "#111827" },
   header: {
     paddingHorizontal: 24,

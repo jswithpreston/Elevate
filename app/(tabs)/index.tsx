@@ -1,3 +1,5 @@
+import GlobalHeader from "@/components/global-header";
+import QuickSwitcher from "@/components/quick-switcher";
 import { useAppTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
@@ -24,8 +26,10 @@ export default function HomeScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
 
-  const { tasks, habits, goals, fetchData } = useStore();
-  const [firstName, setFirstName] = useState("");
+  const { tasks, habits, goals, fetchData, toggleTask, completeHabit } =
+    useStore();
+  const [lastName, setLastName] = useState("");
+  const [switcherVisible, setSwitcherVisible] = useState(false);
 
   // Format date: THURSDAY, OCT 26
   const dateOpts: Intl.DateTimeFormatOptions = {
@@ -48,9 +52,13 @@ export default function HomeScreen() {
         user.user_metadata?.name ||
         user.email?.split("@")[0] ||
         "";
-      // Use only the first name
-      const first = fullName.trim().split(" ")[0] || "";
-      setFirstName(first);
+      const nameParts = fullName.trim().split(" ");
+      // Use last name if available, otherwise first name, otherwise email prefix
+      const last =
+        nameParts.length > 1
+          ? nameParts[nameParts.length - 1]
+          : nameParts[0] || "";
+      setLastName(last);
     });
   }, []);
 
@@ -73,7 +81,7 @@ export default function HomeScreen() {
     if (totalTasks === 0)
       return "Add your first tasks to start tracking your day.";
     if (dailyPercent === 100)
-      return "Incredible! You've completed all your tasks for today. 🎉";
+      return "Incredible! You've completed all your tasks for today. \ud83c\udf89";
     if (dailyPercent >= 75)
       return "Great progress! You're almost there. Keep pushing.";
     if (dailyPercent >= 50)
@@ -88,23 +96,16 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Top Nav */}
-        <View style={styles.topNav}>
-          <Ionicons name="apps-outline" size={24} color="#0041c8" />
-          <Text style={[styles.navTitle, isDark && styles.textDark]}>
-            Elevate
-          </Text>
-          <Ionicons name="notifications-outline" size={24} color="#0041c8" />
-        </View>
+        {/* Top Nav */}
+        <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} />
 
-        {/* Header */}
+        {/* Header - single line greeting */}
         <View style={styles.header}>
           <Text style={[styles.dateLabel, isDark && styles.textDarkSecondary]}>
             {dateStr}
           </Text>
-          <Text style={[styles.greeting, isDark && styles.textDark]}>
-            {greeting}
-            {"\n"}
-            {firstName ? `${firstName}.` : ""}
+          <Text style={[styles.greeting, isDark && styles.textDark]} numberOfLines={1} adjustsFontSizeToFit>
+            {greeting} {lastName || ""}
           </Text>
         </View>
 
@@ -171,9 +172,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() =>
-                    useStore.getState().toggleTask(task.id, task.completed)
-                  }
+                  onPress={() => toggleTask(task.id, task.completed)}
                 >
                   <View style={styles.radioEmpty} />
                 </TouchableOpacity>
@@ -217,13 +216,11 @@ export default function HomeScreen() {
                     !done && styles.habitCardEmpty,
                   ]}
                   onPress={() =>
-                    useStore
-                      .getState()
-                      .completeHabit(
-                        habit.id,
-                        habit.streak,
-                        habit.last_completed_date,
-                      )
+                    completeHabit(
+                      habit.id,
+                      habit.streak,
+                      habit.last_completed_date,
+                    )
                   }
                 >
                   <View style={styles.habitCardHeader}>
@@ -289,9 +286,7 @@ export default function HomeScreen() {
               <View key={task.id}>
                 <View style={styles.taskItem}>
                   <TouchableOpacity
-                    onPress={() =>
-                      useStore.getState().toggleTask(task.id, task.completed)
-                    }
+                    onPress={() => toggleTask(task.id, task.completed)}
                   >
                     <View style={styles.radioEmpty} />
                   </TouchableOpacity>
@@ -319,10 +314,15 @@ export default function HomeScreen() {
         {/* Quote */}
         <View style={styles.quoteSection}>
           <Text style={styles.quoteText}>
-            {"Consistency is what transforms average into excellence."}
+            Consistency is what transforms average into excellence.
           </Text>
         </View>
       </ScrollView>
+      <QuickSwitcher
+        visible={switcherVisible}
+        onClose={() => setSwitcherVisible(false)}
+        currentRoute="home"
+      />
     </SafeAreaView>
   );
 }
@@ -352,15 +352,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 1.2,
     color: "#434656",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   greeting: {
     fontFamily: "Manrope",
-    fontSize: 42,
+    fontSize: 22,
     fontWeight: "700",
-    lineHeight: 48,
     color: "#141d23",
-    letterSpacing: -0.84,
+    letterSpacing: -0.56,
   },
   textDark: { color: "#ffffff" },
   textDarkSecondary: { color: "#c3c5d9" },

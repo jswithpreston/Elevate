@@ -1,11 +1,14 @@
+import GlobalHeader from "@/components/global-header";
 import QuickSwitcher from "@/components/quick-switcher";
 import { useAppTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -14,12 +17,18 @@ import {
   View,
 } from "react-native";
 
+const CLOUDINARY_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || "demo";
+const CLOUDINARY_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "docs_upload_example_us_preset";
+const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
   const [switcherVisible, setSwitcherVisible] = useState(false);
   const [userName, setUserName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { tasks, habits, goals } = useStore();
 
   useEffect(() => {
@@ -31,8 +40,76 @@ export default function ProfileScreen() {
         user.email?.split("@")[0] ||
         "";
       setUserName(fullName.trim());
+      if (user.user_metadata?.avatar_url) {
+        setAvatarUrl(user.user_metadata.avatar_url);
+      }
     });
   }, []);
+
+  // Calculate level based on total completed tasks + habits streaks + goals achieved
+  const totalCompletedTasks = tasks.filter((t) => t.completed).length;
+  const totalStreakPoints = habits.reduce((s, h) => s + h.streak, 0);
+  const goalsAchieved = goals.filter((g) => g.progress >= 100).length;
+  const totalPoints =
+    totalCompletedTasks * 2 + totalStreakPoints * 3 + goalsAchieved * 10;
+  // Dynamic level progression
+  const level = Math.max(1, Math.floor(totalPoints / 25) + 1);
+
+  const getLevelTitle = (lvl: number) => {
+    if (lvl >= 25) return "VISIONARY MASTER";
+    if (lvl >= 20) return "ELITE ACHIEVER";
+    if (lvl >= 15) return "GROWTH ARCHITECT";
+    if (lvl >= 10) return "DEDICATED STRIVER";
+    if (lvl >= 5) return "RISING STAR";
+    return "BEGINNER EXPLORER";
+  };
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", {
+        uri,
+        type: "image/jpeg",
+        name: "profile.jpg",
+      } as any);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      const res = await fetch(CLOUDINARY_UPLOAD_URL, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.secure_url) {
+        setAvatarUrl(data.secure_url);
+        // Save avatar_url to user metadata
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          await supabase.auth.updateUser({
+            data: { avatar_url: data.secure_url },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -40,25 +117,29 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-      <View style={styles.header}>
-        <Ionicons name="apps-outline" size={24} color="#0041c8" />
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>
-          Elevate
-        </Text>
-        <Ionicons name="notifications-outline" size={24} color="#0041c8" />
-      </View>
+      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            {/* Mock avatar */}
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={60} color="#c3c5d9" />
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={handlePickImage}
+            disabled={uploading}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={60} color="#c3c5d9" />
+              </View>
+            )}
+            <View style={styles.cameraIconOverlay}>
+              <Ionicons name="camera-outline" size={20} color="#ffffff" />
             </View>
-          </View>
+          </TouchableOpacity>
           <Text style={[styles.name, isDark && styles.textDark]}>
             {userName}
           </Text>
@@ -69,7 +150,9 @@ export default function ProfileScreen() {
               color="#0041c8"
               style={{ marginRight: 6 }}
             />
-            <Text style={styles.badgeText}>LEVEL 12 - GROWTH ARCHITECT</Text>
+            <Text style={styles.badgeText}>
+              LEVEL {level} - {getLevelTitle(level)}
+            </Text>
           </View>
         </View>
 
@@ -80,23 +163,17 @@ export default function ProfileScreen() {
               size={24}
               color="#434656"
             />
-            <Text style={styles.statValue}>
-              {tasks.filter((t) => t.completed).length}
-            </Text>
+            <Text style={styles.statValue}>{totalCompletedTasks}</Text>
             <Text style={styles.statLabel}>TASKS DONE</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="refresh-outline" size={24} color="#434656" />
-            <Text style={styles.statValue}>
-              {habits.reduce((s, h) => s + h.streak, 0)}
-            </Text>
+            <Text style={styles.statValue}>{totalStreakPoints}</Text>
             <Text style={styles.statLabel}>TOTAL STREAK</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="flag-outline" size={24} color="#434656" />
-            <Text style={styles.statValue}>
-              {goals.filter((g) => g.progress >= 100).length}
-            </Text>
+            <Text style={styles.statValue}>{goalsAchieved}</Text>
             <Text style={styles.statLabel}>GOALS MET</Text>
           </View>
           <View
@@ -120,7 +197,10 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.menuContainer}>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/(tabs)/settings")}
+          >
             <View style={styles.menuLeft}>
               <Ionicons
                 name="settings-outline"
@@ -133,7 +213,10 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/(tabs)/notifications")}
+          >
             <View style={styles.menuLeft}>
               <Ionicons
                 name="notifications-outline"
@@ -146,7 +229,10 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/(tabs)/appearance")}
+          >
             <View style={styles.menuLeft}>
               <Ionicons
                 name="color-palette-outline"
@@ -161,7 +247,10 @@ export default function ProfileScreen() {
 
           <View style={styles.menuDivider} />
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/(tabs)/account")}
+          >
             <View style={styles.menuLeft}>
               <Ionicons
                 name="person-outline"
@@ -174,7 +263,10 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color="#c3c5d9" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/(tabs)/help")}
+          >
             <View style={styles.menuLeft}>
               <Ionicons
                 name="help-circle-outline"
@@ -250,6 +342,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
+  },
+  avatarImage: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
   },
   avatarPlaceholder: {
     width: 112,
@@ -258,6 +356,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#e1e3e4",
     alignItems: "center",
     justifyContent: "center",
+  },
+  cameraIconOverlay: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#0041c8",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   name: {
     fontFamily: "Manrope",

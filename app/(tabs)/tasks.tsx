@@ -1,6 +1,11 @@
+import DatePickerField from "@/components/date-picker-field";
+import GlobalHeader from "@/components/global-header";
+import QuickSwitcher from "@/components/quick-switcher";
 import { useAppTheme } from "@/context/ThemeContext";
+import { scheduleTaskReminder } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -31,6 +36,8 @@ function formatRelativeTime(dateString: string): string {
 export default function TasksScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
+  const router = useRouter();
+  const [switcherVisible, setSwitcherVisible] = useState(false);
 
   const { tasks, addTask, toggleTask, deleteTask } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,13 +45,24 @@ export default function TasksScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskStartDate, setNewTaskStartDate] = useState("");
+  const [newTaskDeadline, setNewTaskDeadline] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddTask = async () => {
-    if (!newTaskTitle.trim() || isAdding) return;
+    if (!newTaskTitle.trim() || !newTaskStartDate.trim() || !newTaskDeadline.trim() || isAdding) return;
     setIsAdding(true);
-    await addTask(newTaskTitle.trim());
+    await addTask(
+      newTaskTitle.trim(),
+      newTaskStartDate,
+      newTaskDeadline,
+    );
+    if (newTaskDeadline) {
+      await scheduleTaskReminder(newTaskTitle.trim(), newTaskTitle.trim(), newTaskDeadline);
+    }
     setNewTaskTitle("");
+    setNewTaskStartDate("");
+    setNewTaskDeadline("");
     setModalVisible(false);
     setIsAdding(false);
   };
@@ -67,13 +85,7 @@ export default function TasksScreen() {
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Ionicons name="apps-outline" size={24} color="#0041c8" />
-        <Text style={[styles.headerTitle, isDark && styles.textDark]}>
-          Tasks
-        </Text>
-        <Ionicons name="notifications-outline" size={24} color="#0041c8" />
-      </View>
+      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} title="Tasks" />
 
       {/* Summary row */}
       {tasks.length > 0 && (
@@ -174,6 +186,18 @@ export default function TasksScreen() {
                 <Text style={styles.taskCardTime}>
                   {formatRelativeTime(task.created_at)}
                 </Text>
+                {task.deadline && (
+                  <Text
+                    style={[
+                      styles.taskCardDeadline,
+                      new Date(task.deadline) < new Date() && !task.completed
+                        ? styles.taskCardDeadlineOverdue
+                        : null,
+                    ]}
+                  >
+                    Due: {new Date(task.deadline).toLocaleDateString()}
+                  </Text>
+                )}
               </View>
 
               <TouchableOpacity
@@ -237,8 +261,10 @@ export default function TasksScreen() {
             onPress={() => setModalVisible(false)}
             activeOpacity={1}
           />
-          <View
+          <ScrollView
             style={[styles.modalContent, isDark && styles.modalContentDark]}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, isDark && styles.textDark]}>
@@ -251,8 +277,17 @@ export default function TasksScreen() {
               value={newTaskTitle}
               onChangeText={setNewTaskTitle}
               autoFocus
-              onSubmitEditing={handleAddTask}
-              returnKeyType="done"
+              returnKeyType="next"
+            />
+            <DatePickerField
+              label="START DATE (OPTIONAL)"
+              value={newTaskStartDate}
+              onChange={setNewTaskStartDate}
+            />
+            <DatePickerField
+              label="DEADLINE (OPTIONAL)"
+              value={newTaskDeadline}
+              onChange={setNewTaskDeadline}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -260,6 +295,8 @@ export default function TasksScreen() {
                 onPress={() => {
                   setModalVisible(false);
                   setNewTaskTitle("");
+                  setNewTaskStartDate("");
+                  setNewTaskDeadline("");
                 }}
               >
                 <Text style={styles.modalBtnTextCancel}>Cancel</Text>
@@ -267,19 +304,24 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtnAdd,
-                  !newTaskTitle.trim() && styles.modalBtnDisabled,
+                  (!newTaskTitle.trim() || !newTaskStartDate.trim() || !newTaskDeadline.trim()) && styles.modalBtnDisabled,
                 ]}
                 onPress={handleAddTask}
-                disabled={!newTaskTitle.trim() || isAdding}
+                disabled={!newTaskTitle.trim() || !newTaskStartDate.trim() || !newTaskDeadline.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
-                  {isAdding ? "Adding…" : "Add Task"}
+                  {isAdding ? "Adding\u2026" : "Add Task"}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+      <QuickSwitcher
+        visible={switcherVisible}
+        onClose={() => setSwitcherVisible(false)}
+        currentRoute="tasks"
+      />
     </SafeAreaView>
   );
 }
@@ -302,6 +344,7 @@ const styles = StyleSheet.create({
     color: "#141d23",
   },
   textDark: { color: "#ffffff" },
+  textDarkSecondary: { color: "#c3c5d9" },
   summaryRow: {
     flexDirection: "row",
     paddingHorizontal: 24,
@@ -409,6 +452,16 @@ const styles = StyleSheet.create({
     color: "#737688",
     letterSpacing: 0.3,
   },
+  taskCardDeadline: {
+    fontFamily: "JetBrains Mono",
+    fontSize: 11,
+    color: "#737688",
+    letterSpacing: 0.3,
+    marginTop: 2,
+  },
+  taskCardDeadlineOverdue: {
+    color: "#ba1a1a",
+  },
   emptyState: {
     flex: 1,
     alignItems: "center",
@@ -454,7 +507,6 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: "#fff",
     padding: 24,
-    paddingBottom: 40,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
   },
@@ -473,6 +525,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#141d23",
     marginBottom: 20,
+  },
+  modalLabel: {
+    fontFamily: "JetBrains Mono",
+    fontSize: 11,
+    color: "#434656",
+    letterSpacing: 1.2,
+    marginBottom: 8,
   },
   modalInput: {
     backgroundColor: "#f6faff",

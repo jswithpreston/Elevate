@@ -1,45 +1,40 @@
-import { Tabs } from "expo-router";
-
-import { HapticTab } from "@/components/haptic-tab";
-
 import { useAppTheme } from "@/context/ThemeContext";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { Platform } from "react-native";
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function TabsLayout() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#3B82F6", // Elevate blue
-        tabBarInactiveTintColor: isDark ? "#9CA3AF" : "#6B7280",
-        tabBarStyle: {
-          backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
-          borderTopWidth: 1,
-          borderTopColor: isDark ? "#374151" : "#F1F5F9",
-        },
         headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: "#0041c8",
+        tabBarInactiveTintColor: "#737688",
+        tabBarStyle: {
+          backgroundColor: isDark ? "#141d23" : "#ffffff",
+          borderTopColor: isDark ? "#293138" : "#e1e3e4",
+          borderTopWidth: 1,
+          paddingBottom: Platform.OS === "ios" ? 20 : 8,
+          paddingTop: 8,
+          height: Platform.OS === "ios" ? 85 : 65,
+        },
+        tabBarLabelStyle: {
+          fontFamily: "JetBrains Mono",
+          fontSize: 10,
+          fontWeight: "600",
+          letterSpacing: 0.5,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <Ionicons size={24} name="home" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="tasks"
-        options={{
-          title: "Tasks",
-          tabBarIcon: ({ color }) => (
-            <Ionicons size={24} name="checkbox-outline" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -47,8 +42,21 @@ export default function TabLayout() {
         name="habits"
         options={{
           title: "Habits",
-          tabBarIcon: ({ color }) => (
-            <Ionicons size={24} name="repeat" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="repeat-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tasks"
+        options={{
+          title: "Tasks",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -56,17 +64,8 @@ export default function TabLayout() {
         name="goals"
         options={{
           title: "Goals",
-          tabBarIcon: ({ color }) => (
-            <Ionicons size={24} name="flag-outline" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <Ionicons size={24} name="person-outline" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flag-outline" size={size} color={color} />
           ),
         }}
       />
@@ -74,19 +73,26 @@ export default function TabLayout() {
         name="progress"
         options={{
           title: "Progress",
-          tabBarIcon: ({ color }) => (
-            <Ionicons size={24} name="stats-chart-outline" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trending-up-outline" size={size} color={color} />
           ),
         }}
       />
-
-      {/* Hide the default explore tab if it still exists */}
       <Tabs.Screen
-        name="explore"
+        name="profile"
         options={{
-          href: null,
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
         }}
       />
+      {/* Hidden from tab bar — stack screens pushed from within tabs */}
+      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="account" options={{ href: null }} />
+      <Tabs.Screen name="help" options={{ href: null }} />
+      <Tabs.Screen name="appearance" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   );
 }
