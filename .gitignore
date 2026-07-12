@@ -45,3 +45,4 @@ app-example
 
 .agent/
 .claude/
+.env
