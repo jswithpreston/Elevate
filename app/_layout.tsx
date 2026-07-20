@@ -1,7 +1,9 @@
 import { ThemeProvider as AppThemeProvider, useAppTheme } from "@/context/ThemeContext";
+import { ToastProvider, useToast } from "@/context/ToastContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { supabase } from "@/lib/supabase";
 import { registerForPushNotificationsAsync } from "@/lib/notifications";
+import { setStoreErrorHandler } from "@/store/useStore";
 import { useStore } from "@/store/useStore";
 import {
   DarkTheme,
@@ -10,12 +12,61 @@ import {
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "react-native-reanimated";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+function StoreErrorBridge() {
+  const { showToast } = useToast();
+  useEffect(() => {
+    setStoreErrorHandler((msg) => showToast(msg, "error"));
+  }, [showToast]);
+  return null;
+}
+
+function NotificationsBridge() {
+  const { showToast } = useToast();
+  const { addNotification } = useStore();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+
+  useEffect(() => {
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      const { title, body } = notification.request.content;
+      
+      let type: any = "reminder";
+      if (title?.toLowerCase().includes("habit")) type = "streak";
+      if (title?.toLowerCase().includes("goal")) type = "achievement";
+      
+      const displayTitle = title || "Notification";
+      const displayMessage = body || "";
+      
+      showToast(displayTitle, "info");
+      addNotification(type, displayTitle, displayMessage);
+    });
+
+    return () => {
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+    };
+  }, [showToast, addNotification]);
+
+  return null;
+}
 
 function RootNavigation() {
   const { activeTheme } = useAppTheme();
@@ -96,7 +147,11 @@ export default function RootLayout() {
 
   return (
     <AppThemeProvider>
-      <RootNavigation />
+      <ToastProvider>
+        <StoreErrorBridge />
+        <NotificationsBridge />
+        <RootNavigation />
+      </ToastProvider>
     </AppThemeProvider>
   );
 }

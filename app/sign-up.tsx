@@ -1,43 +1,70 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons, AntDesign } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/context/ToastContext';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Focus states
+  const [nameFocused, setNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmFocused, setConfirmFocused] = useState(false);
 
   const handleSignUp = async () => {
     if (!email || !password || !name) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showToast('Please fill in all fields', 'error');
       return;
     }
-    
+    if (password !== confirmPassword) {
+      showToast('Passwords do not match', 'error');
+      return;
+    }
+    if (password.length < 8) {
+      showToast('Password must be at least 8 characters', 'error');
+      return;
+    }
+
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
       options: {
-        data: {
-          full_name: name,
-        }
-      }
+        data: { full_name: name.trim() },
+      },
     });
-    
+
     setLoading(false);
-    
+
     if (error) {
-      Alert.alert('Sign Up Failed', error.message);
+      showToast(error.message, 'error');
     } else {
       if (data.session) {
-        router.replace('/(tabs)');
+        router.replace('/onboarding');
       } else {
-        Alert.alert('Success', 'Please check your email for the verification link.');
+        showToast('Check your email for the verification link!', 'success');
         router.push('/login');
       }
     }
@@ -49,102 +76,177 @@ export default function SignUpScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Back button */}
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={20} color="#434656" />
+          </TouchableOpacity>
+
+          {/* Branding */}
+          <View style={styles.brandContainer}>
+            <View style={styles.brandIcon}>
+              <Ionicons name="trending-up" size={32} color="#0041c8" />
+            </View>
+            <Text style={styles.logoText}>Elevate</Text>
+            <Text style={styles.tagline}>Your OS for personal growth.</Text>
+          </View>
+
           {/* Card */}
           <View style={styles.card}>
-            
-            {/* Top Icon */}
-            <View style={styles.iconContainer}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="infinite" size={24} color="#3B82F6" />
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Start your growth journey today.</Text>
+
+            {/* Name */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>FULL NAME</Text>
+              <View style={[styles.inputWrapper, nameFocused && styles.inputWrapperFocused]}>
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={nameFocused ? '#0041c8' : '#c3c5d9'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your name"
+                  placeholderTextColor="#c3c5d9"
+                  value={name}
+                  onChangeText={setName}
+                  onFocus={() => setNameFocused(true)}
+                  onBlur={() => setNameFocused(false)}
+                />
               </View>
             </View>
 
-            <Text style={styles.title}>Create Your Account</Text>
-            <Text style={styles.subtitle}>Start your ascent today.</Text>
-
-            {/* Name Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="John Doe"
-                placeholderTextColor="#A0A0A0"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-              />
-            </View>
-
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="hello@example.com"
-                placeholderTextColor="#A0A0A0"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordInputWrapper}>
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>EMAIL</Text>
+              <View style={[styles.inputWrapper, emailFocused && styles.inputWrapperFocused]}>
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={emailFocused ? '#0041c8' : '#c3c5d9'}
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={[styles.input, { flex: 1, borderBottomWidth: 0, paddingVertical: 0 }]}
-                  placeholder="••••••••"
-                  placeholderTextColor="#A0A0A0"
+                  style={styles.input}
+                  placeholder="your@email.com"
+                  placeholderTextColor="#c3c5d9"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                />
+              </View>
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>PASSWORD</Text>
+              <View style={[styles.inputWrapper, passwordFocused && styles.inputWrapperFocused]}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={passwordFocused ? '#0041c8' : '#c3c5d9'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Min. 8 characters"
+                  placeholderTextColor="#c3c5d9"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                  <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#A0A0A0" />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={18}
+                    color="#c3c5d9"
+                  />
                 </TouchableOpacity>
               </View>
-              <View style={styles.inputBorder} />
+            </View>
+
+            {/* Confirm Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>CONFIRM PASSWORD</Text>
+              <View style={[styles.inputWrapper, confirmFocused && styles.inputWrapperFocused]}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={confirmFocused ? '#0041c8' : '#c3c5d9'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Re-enter password"
+                  placeholderTextColor="#c3c5d9"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirm}
+                  onFocus={() => setConfirmFocused(true)}
+                  onBlur={() => setConfirmFocused(false)}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirm(!showConfirm)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                    size={18}
+                    color="#c3c5d9"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Sign Up Button */}
-            <TouchableOpacity 
-              style={styles.primaryButton} 
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.primaryButtonLoading]}
               onPress={handleSignUp}
               disabled={loading}
+              activeOpacity={0.85}
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
-                  <Text style={styles.primaryButtonText}>SIGN UP</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                  <Text style={styles.primaryButtonText}>Create Account</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#fff" />
                 </>
               )}
             </TouchableOpacity>
 
+            {/* Terms note */}
+            <Text style={styles.termsText}>
+              By creating an account you agree to our Terms of Service and Privacy Policy.
+            </Text>
+
             {/* Divider */}
-            <View style={styles.dividerContainer}>
+            <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+              <Text style={styles.dividerText}>HAVE AN ACCOUNT?</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Social Buttons */}
-            <TouchableOpacity style={styles.socialButton}>
-              <AntDesign name="google" size={18} color="#DB4437" />
-              <Text style={styles.socialButtonText}>GOOGLE</Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => router.push('/login')}
+            >
+              <Text style={styles.secondaryButtonText}>Sign In Instead</Text>
             </TouchableOpacity>
-
-            {/* Bottom Link */}
-            <View style={styles.bottomLinkContainer}>
-              <Text style={styles.bottomLinkText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/login')}>
-                <Text style={styles.bottomLinkAction}>Login</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -153,142 +255,161 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F0F4F8',
-  },
-  scrollContainer: {
+  safeArea: { flex: 1, backgroundColor: '#f6faff' },
+  container: {
     flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#ecf5fe',
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    marginBottom: 24,
+  },
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  brandIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#e9f2fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#dbe4ed',
+  },
+  logoText: {
+    fontFamily: 'Manrope',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#141d23',
+    letterSpacing: -0.64,
+    marginBottom: 4,
+  },
+  tagline: {
+    fontFamily: 'Manrope',
+    fontSize: 15,
+    color: '#737688',
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
+    backgroundColor: '#ffffff',
     borderRadius: 28,
-    backgroundColor: '#E0F2FE',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f3f8',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#111827',
-    textAlign: 'center',
-    marginBottom: 8,
+    fontFamily: 'Manrope',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#141d23',
+    marginBottom: 4,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#4B5563',
-    textAlign: 'center',
-    marginBottom: 32,
+    fontFamily: 'Manrope',
+    fontSize: 15,
+    color: '#737688',
+    marginBottom: 28,
   },
-  inputContainer: {
-    marginBottom: 24,
-  },
+  inputGroup: { marginBottom: 20 },
   label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontFamily: 'JetBrains Mono',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#434656',
+    letterSpacing: 1.2,
+    marginBottom: 10,
   },
-  input: {
-    fontSize: 16,
-    color: '#111827',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#D1D5DB',
-  },
-  passwordInputWrapper: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    backgroundColor: '#f6faff',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#dbe4ed',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
   },
-  inputBorder: {
-    height: 1,
-    backgroundColor: '#D1D5DB',
+  inputWrapperFocused: {
+    borderColor: '#0041c8',
+    backgroundColor: '#ffffff',
   },
-  eyeIcon: {
-    padding: 4,
+  inputIcon: { marginRight: 10 },
+  input: {
+    flex: 1,
+    fontFamily: 'Manrope',
+    fontSize: 16,
+    color: '#141d23',
+    paddingVertical: 13,
   },
   primaryButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 100,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    backgroundColor: '#0041c8',
+    borderRadius: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     marginTop: 8,
-    marginBottom: 32,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    shadowColor: '#0041c8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
+  primaryButtonLoading: { opacity: 0.8 },
   primaryButtonText: {
+    fontFamily: 'Manrope',
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 1,
+    fontSize: 17,
+    fontWeight: '700',
   },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    paddingHorizontal: 16,
+  termsText: {
+    fontFamily: 'Manrope',
     fontSize: 12,
-    color: '#6B7280',
-    letterSpacing: 1,
+    color: '#c3c5d9',
+    textAlign: 'center',
+    marginTop: 14,
+    lineHeight: 18,
   },
-  socialButton: {
+  divider: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 100,
-    paddingVertical: 14,
-    marginBottom: 16,
+    marginVertical: 24,
+    gap: 12,
   },
-  socialButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginLeft: 12,
-    letterSpacing: 1,
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#e6eff8' },
+  dividerText: {
+    fontFamily: 'JetBrains Mono',
+    fontSize: 9,
+    color: '#c3c5d9',
+    letterSpacing: 1.5,
   },
-  bottomLinkContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  secondaryButton: {
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 16,
+    borderWidth: 1.5,
+    borderColor: '#dbe4ed',
+    backgroundColor: '#f6faff',
   },
-  bottomLinkText: {
-    fontSize: 14,
-    color: '#4B5563',
-  },
-  bottomLinkAction: {
-    fontSize: 14,
+  secondaryButtonText: {
+    fontFamily: 'Manrope',
+    color: '#141d23',
+    fontSize: 16,
     fontWeight: '600',
-    color: '#3B82F6',
   },
 });

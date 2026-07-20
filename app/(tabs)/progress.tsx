@@ -103,7 +103,7 @@ export default function ProgressScreen() {
     >
       {/* Header */}
       {/* Header */}
-      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} />
+      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} title="Progress" />
       <View style={styles.header}>
         <Text style={[styles.title, isDark && styles.textDark]}>Progress</Text>
       </View>

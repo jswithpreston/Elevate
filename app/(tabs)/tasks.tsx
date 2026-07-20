@@ -1,17 +1,18 @@
 import DatePickerField from "@/components/date-picker-field";
 import GlobalHeader from "@/components/global-header";
 import QuickSwitcher from "@/components/quick-switcher";
+import { SkeletonList } from "@/components/skeleton-loader";
 import { useAppTheme } from "@/context/ThemeContext";
+import { useToast } from "@/context/ToastContext";
 import { scheduleTaskReminder } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -38,16 +39,26 @@ export default function TasksScreen() {
   const isDark = activeTheme === "dark";
   const router = useRouter();
   const [switcherVisible, setSwitcherVisible] = useState(false);
+  const { showToast } = useToast();
 
-  const { tasks, addTask, toggleTask, deleteTask } = useStore();
+  const { tasks, isLoading, addTask, updateTask, toggleTask, deleteTask } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("All");
 
+  // Add modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskStartDate, setNewTaskStartDate] = useState("");
   const [newTaskDeadline, setNewTaskDeadline] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+
+  // Edit modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editDeadline, setEditDeadline] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim() || isAdding) return;
@@ -64,11 +75,36 @@ export default function TasksScreen() {
         console.warn("Failed to schedule reminder:", e);
       }
     }
+    showToast("Task added!", "success");
     setNewTaskTitle("");
     setNewTaskStartDate("");
     setNewTaskDeadline("");
     setModalVisible(false);
     setIsAdding(false);
+  };
+
+  const openEditModal = (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    setEditingTaskId(taskId);
+    setEditTitle(task.title);
+    setEditStartDate(task.start_date || "");
+    setEditDeadline(task.deadline || "");
+    setEditModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTaskId || !editTitle.trim() || isSaving) return;
+    setIsSaving(true);
+    await updateTask(editingTaskId, {
+      title: editTitle.trim(),
+      start_date: editStartDate || null,
+      deadline: editDeadline || null,
+    });
+    showToast("Task updated!", "success");
+    setEditModalVisible(false);
+    setEditingTaskId(null);
+    setIsSaving(false);
   };
 
   const filteredTasks = tasks.filter((task) => {
@@ -157,7 +193,9 @@ export default function TasksScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {filteredTasks.length > 0 ? (
+        {isLoading ? (
+          <SkeletonList count={4} isDark={isDark} />
+        ) : filteredTasks.length > 0 ? (
           filteredTasks.map((task) => (
             <View
               key={task.id}
@@ -203,6 +241,15 @@ export default function TasksScreen() {
                   </Text>
                 )}
               </View>
+
+              {/* Edit button */}
+              <TouchableOpacity
+                onPress={() => openEditModal(task.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ marginRight: 8 }}
+              >
+                <Ionicons name="pencil-outline" size={17} color="#737688" />
+              </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => deleteTask(task.id)}
@@ -314,13 +361,82 @@ export default function TasksScreen() {
                 disabled={!newTaskTitle.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
-                  {isAdding ? "Adding\u2026" : "Add Task"}
+                  {isAdding ? "Adding…" : "Add Task"}
                 </Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Edit Task Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setEditModalVisible(false)}
+            activeOpacity={1}
+          />
+          <ScrollView
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+              Edit Task
+            </Text>
+            <TextInput
+              style={[styles.modalInput, isDark && styles.modalInputDark]}
+              placeholder="Task title"
+              placeholderTextColor="#c3c5d9"
+              value={editTitle}
+              onChangeText={setEditTitle}
+              autoFocus
+              returnKeyType="next"
+            />
+            <DatePickerField
+              label="START DATE (OPTIONAL)"
+              value={editStartDate}
+              onChange={setEditStartDate}
+            />
+            <DatePickerField
+              label="DEADLINE (OPTIONAL)"
+              value={editDeadline}
+              onChange={setEditDeadline}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalBtnCancel}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.modalBtnTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtnAdd,
+                  !editTitle.trim() && styles.modalBtnDisabled,
+                ]}
+                onPress={handleSaveEdit}
+                disabled={!editTitle.trim() || isSaving}
+              >
+                <Text style={styles.modalBtnTextAdd}>
+                  {isSaving ? "Saving…" : "Save Changes"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <QuickSwitcher
         visible={switcherVisible}
         onClose={() => setSwitcherVisible(false)}
@@ -333,20 +449,6 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 20, backgroundColor: "#f6faff" },
   containerDark: { backgroundColor: "#141d23" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-  headerTitle: {
-    fontFamily: "Manrope",
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#141d23",
-  },
   textDark: { color: "#ffffff" },
   textDarkSecondary: { color: "#c3c5d9" },
   summaryRow: {

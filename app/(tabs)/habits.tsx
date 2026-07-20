@@ -1,17 +1,20 @@
 import DatePickerField from "@/components/date-picker-field";
 import GlobalHeader from "@/components/global-header";
 import QuickSwitcher from "@/components/quick-switcher";
+import { SkeletonList } from "@/components/skeleton-loader";
 import { useAppTheme } from "@/context/ThemeContext";
+import { useToast } from "@/context/ToastContext";
 import { scheduleHabitReminder } from "@/lib/notifications";
 import { useStore } from "@/store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,23 +25,44 @@ import {
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
+/** Returns the ISO date string for a day offset from today (0 = today, -1 = yesterday, etc.) */
+function offsetDate(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split("T")[0];
+}
+
+/** Build last 7 days array: [{label, date}] index 0 = 6 days ago, index 6 = today */
+function getLast7Days(): { label: string; date: string }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const offset = i - 6;
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return {
+      label: DAYS[d.getDay()],
+      date: d.toISOString().split("T")[0],
+    };
+  });
+}
+
 export default function HabitsScreen() {
   const { activeTheme } = useAppTheme();
   const isDark = activeTheme === "dark";
   const router = useRouter();
   const [switcherVisible, setSwitcherVisible] = useState(false);
+  const { showToast } = useToast();
 
-  const { habits, addHabit, completeHabit, deleteHabit } = useStore();
+  const { habits, isLoading, addHabit, completeHabit, deleteHabit } = useStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [newHabitTitle, setNewHabitTitle] = useState("");
   const [newHabitStartDate, setNewHabitStartDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [newHabitTime, setNewHabitTime] = useState("09:00");
   const [isAdding, setIsAdding] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
-  const todayDayIndex = new Date().getDay(); // 0 = Sunday
+  const last7Days = getLast7Days();
 
   const completedToday = habits.filter(
     (h) => h.last_completed_date === today,
@@ -50,10 +74,11 @@ export default function HabitsScreen() {
     setIsAdding(true);
     await addHabit(newHabitTitle.trim(), newHabitStartDate);
     try {
-      await scheduleHabitReminder(newHabitTitle.trim(), newHabitTitle.trim(), newHabitTime); // We use title as ID temporarily since store doesn't return ID directly
+      await scheduleHabitReminder(newHabitTitle.trim(), newHabitTitle.trim(), newHabitTime);
     } catch (e) {
       console.warn("Failed to schedule reminder:", e);
     }
+    showToast("Habit created!", "success");
     setNewHabitTitle("");
     setNewHabitStartDate(new Date().toISOString().split("T")[0]);
     setNewHabitTime("09:00");
@@ -61,10 +86,15 @@ export default function HabitsScreen() {
     setIsAdding(false);
   };
 
+  const handleComplete = async (habitId: string, streak: number, lastCompleted: string | null) => {
+    await completeHabit(habitId, streak, lastCompleted);
+    showToast("Habit logged! 🔥", "success");
+  };
+
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       {/* Header */}
-      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} />
+      <GlobalHeader onOpenSwitcher={() => setSwitcherVisible(true)} title="Habits" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -104,35 +134,46 @@ export default function HabitsScreen() {
           </View>
         )}
 
-        {/* This Week row */}
+        {/* 7-Day mini calendar */}
         {habits.length > 0 && (
           <View style={[styles.weekCard, isDark && styles.weekCardDark]}>
             <Text style={[styles.weekTitle, isDark && styles.textDark]}>
               THIS WEEK
             </Text>
             <View style={styles.weekDays}>
-              {DAYS.map((d, i) => {
-                const isToday = i === todayDayIndex;
-                const isPast = i < todayDayIndex;
+              {last7Days.map(({ label, date }, i) => {
+                const isToday = date === today;
+                const anyDoneOnDay = habits.some(
+                  (h) => h.last_completed_date === date,
+                );
+                const allDoneOnDay =
+                  habits.length > 0 &&
+                  habits.every((h) => h.last_completed_date === date);
                 return (
                   <View key={i} style={styles.dayItem}>
                     <Text
                       style={[
                         styles.dayLabel,
                         isDark && styles.textDarkSecondary,
+                        isToday && styles.dayLabelToday,
                       ]}
                     >
-                      {d}
+                      {label}
                     </Text>
                     <View
                       style={[
                         styles.dayDot,
                         isToday && styles.dayDotToday,
-                        isPast && styles.dayDotPast,
+                        !isToday && anyDoneOnDay && styles.dayDotDone,
+                        !isToday && !anyDoneOnDay && date < today && styles.dayDotPast,
                       ]}
                     >
-                      {isToday && completedToday > 0 && (
-                        <Ionicons name="checkmark" size={10} color="#fff" />
+                      {anyDoneOnDay && (
+                        <Ionicons
+                          name={allDoneOnDay ? "checkmark" : "checkmark"}
+                          size={10}
+                          color={isToday ? "#fff" : anyDoneOnDay && !isToday ? "#0041c8" : "#fff"}
+                        />
                       )}
                     </View>
                   </View>
@@ -143,7 +184,9 @@ export default function HabitsScreen() {
         )}
 
         {/* Habits list */}
-        {habits.length > 0 ? (
+        {isLoading ? (
+          <SkeletonList count={3} isDark={isDark} />
+        ) : habits.length > 0 ? (
           habits.map((habit) => {
             const isCompletedToday = habit.last_completed_date === today;
             return (
@@ -180,14 +223,32 @@ export default function HabitsScreen() {
                     ]}
                   >
                     {isCompletedToday
-                      ? `\u2713 Done today \u00b7 ${habit.streak} day streak`
+                      ? `✓ Done today · ${habit.streak} day streak`
                       : `${habit.streak} day streak`}
                   </Text>
+
+                  {/* 7-dot mini streak visual */}
+                  <View style={styles.streakDots}>
+                    {last7Days.map(({ date }, i) => {
+                      const done = habit.last_completed_date === date ||
+                        // approximate: if streak is ongoing, past days assumed done
+                        (habit.last_completed_date === today && date <= today && i >= 7 - Math.min(habit.streak, 7));
+                      return (
+                        <View
+                          key={i}
+                          style={[
+                            styles.streakDot,
+                            done && styles.streakDotFilled,
+                          ]}
+                        />
+                      );
+                    })}
+                  </View>
                 </View>
 
                 <TouchableOpacity
                   onPress={() =>
-                    completeHabit(
+                    handleComplete(
                       habit.id,
                       habit.streak,
                       habit.last_completed_date,
@@ -310,7 +371,7 @@ export default function HabitsScreen() {
                 disabled={!newHabitTitle.trim() || !newHabitStartDate.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
-                  {isAdding ? "Adding\u2026" : "Add Habit"}
+                  {isAdding ? "Adding…" : "Add Habit"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -329,27 +390,9 @@ export default function HabitsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 20, backgroundColor: "#f6faff" },
   containerDark: { backgroundColor: "#141d23" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  headerTitle: {
-    fontFamily: "Manrope",
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#141d23",
-  },
   textDark: { color: "#ffffff" },
   textDarkSecondary: { color: "#c3c5d9" },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 120,
-    flexGrow: 1,
-  },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 120, flexGrow: 1 },
   pageTitle: {
     fontFamily: "Manrope",
     fontSize: 42,
@@ -366,11 +409,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     lineHeight: 26,
   },
-  statsRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
-  },
+  statsRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
   statCard: {
     flex: 1,
     backgroundColor: "#ffffff",
@@ -424,10 +463,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginBottom: 14,
   },
-  weekDays: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  weekDays: { flexDirection: "row", justifyContent: "space-between" },
   dayItem: { alignItems: "center", gap: 6 },
   dayLabel: {
     fontFamily: "JetBrains Mono",
@@ -435,6 +471,7 @@ const styles = StyleSheet.create({
     color: "#737688",
     letterSpacing: 0.5,
   },
+  dayLabelToday: { color: "#0041c8", fontWeight: "700" },
   dayDot: {
     width: 28,
     height: 28,
@@ -444,6 +481,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dayDotToday: { backgroundColor: "#0041c8" },
+  dayDotDone: { backgroundColor: "#e9f2fb", borderWidth: 1.5, borderColor: "#0041c8" },
   dayDotPast: { backgroundColor: "#dbe4ed" },
   habitCard: {
     backgroundColor: "#ffffff",
@@ -473,12 +511,26 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
     color: "#141d23",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   habitCardStreak: {
     fontFamily: "Manrope",
     fontSize: 13,
     color: "#737688",
+    marginBottom: 8,
+  },
+  streakDots: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  streakDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#dbe4ed",
+  },
+  streakDotFilled: {
+    backgroundColor: "#0041c8",
   },
   checkCircleEmpty: {
     width: 44,
@@ -502,11 +554,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  emptyState: {
-    alignItems: "center",
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
+  emptyState: { alignItems: "center", paddingTop: 60, paddingBottom: 40 },
   emptyTitle: {
     fontFamily: "Manrope",
     fontSize: 20,
@@ -598,11 +646,7 @@ const styles = StyleSheet.create({
     color: "#141d23",
     marginBottom: 24,
   },
-  modalInputDark: {
-    backgroundColor: "#141d23",
-    borderColor: "#434656",
-    color: "#ffffff",
-  },
+  modalInputDark: { backgroundColor: "#141d23", borderColor: "#434656", color: "#ffffff" },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
   modalBtnCancel: { padding: 14 },
   modalBtnTextCancel: {
@@ -618,10 +662,5 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   modalBtnDisabled: { backgroundColor: "#c3c5d9" },
-  modalBtnTextAdd: {
-    color: "#fff",
-    fontFamily: "Manrope",
-    fontWeight: "700",
-    fontSize: 16,
-  },
+  modalBtnTextAdd: { color: "#fff", fontFamily: "Manrope", fontWeight: "700", fontSize: 16 },
 });
