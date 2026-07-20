@@ -49,7 +49,7 @@ export default function GoalsScreen() {
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddGoal = async () => {
-    if (!newGoalTitle.trim() || !newGoalStartDate.trim() || !newGoalTargetDate.trim() || isAdding) return;
+    if (!newGoalTitle.trim() || isAdding) return;
     setIsAdding(true);
     await addGoal(
       newGoalTitle.trim(),
@@ -446,10 +446,10 @@ export default function GoalsScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtnAdd,
-                  (!newGoalTitle.trim() || !newGoalStartDate.trim() || !newGoalTargetDate.trim()) && styles.modalBtnDisabled,
+                  !newGoalTitle.trim() && styles.modalBtnDisabled,
                 ]}
                 onPress={handleAddGoal}
-                disabled={!newGoalTitle.trim() || !newGoalStartDate.trim() || !newGoalTargetDate.trim() || isAdding}
+                disabled={!newGoalTitle.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
                   {isAdding ? "Adding\u2026" : "Add Goal"}

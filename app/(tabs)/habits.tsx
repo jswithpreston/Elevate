@@ -49,7 +49,11 @@ export default function HabitsScreen() {
     if (!newHabitTitle.trim() || !newHabitStartDate.trim() || isAdding) return;
     setIsAdding(true);
     await addHabit(newHabitTitle.trim(), newHabitStartDate);
-    await scheduleHabitReminder(newHabitTitle.trim(), newHabitTitle.trim(), newHabitTime); // We use title as ID temporarily since store doesn't return ID directly
+    try {
+      await scheduleHabitReminder(newHabitTitle.trim(), newHabitTitle.trim(), newHabitTime); // We use title as ID temporarily since store doesn't return ID directly
+    } catch (e) {
+      console.warn("Failed to schedule reminder:", e);
+    }
     setNewHabitTitle("");
     setNewHabitStartDate(new Date().toISOString().split("T")[0]);
     setNewHabitTime("09:00");

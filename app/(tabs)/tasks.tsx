@@ -50,7 +50,7 @@ export default function TasksScreen() {
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddTask = async () => {
-    if (!newTaskTitle.trim() || !newTaskStartDate.trim() || !newTaskDeadline.trim() || isAdding) return;
+    if (!newTaskTitle.trim() || isAdding) return;
     setIsAdding(true);
     await addTask(
       newTaskTitle.trim(),
@@ -58,7 +58,11 @@ export default function TasksScreen() {
       newTaskDeadline,
     );
     if (newTaskDeadline) {
-      await scheduleTaskReminder(newTaskTitle.trim(), newTaskTitle.trim(), newTaskDeadline);
+      try {
+        await scheduleTaskReminder(newTaskTitle.trim(), newTaskTitle.trim(), newTaskDeadline);
+      } catch (e) {
+        console.warn("Failed to schedule reminder:", e);
+      }
     }
     setNewTaskTitle("");
     setNewTaskStartDate("");
@@ -304,10 +308,10 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtnAdd,
-                  (!newTaskTitle.trim() || !newTaskStartDate.trim() || !newTaskDeadline.trim()) && styles.modalBtnDisabled,
+                  !newTaskTitle.trim() && styles.modalBtnDisabled,
                 ]}
                 onPress={handleAddTask}
-                disabled={!newTaskTitle.trim() || !newTaskStartDate.trim() || !newTaskDeadline.trim() || isAdding}
+                disabled={!newTaskTitle.trim() || isAdding}
               >
                 <Text style={styles.modalBtnTextAdd}>
                   {isAdding ? "Adding\u2026" : "Add Task"}
